@@ -1,0 +1,44 @@
+@import "@fontsource/plus-jakarta-sans/index.css";
+@import "@fontsource/plus-jakarta-sans/400.css";
+@import "@fontsource/plus-jakarta-sans/600.css";
+@import "@fontsource/plus-jakarta-sans/700.css";
+@import "@fontsource/plus-jakarta-sans/800.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.glass-panel {
+  background: rgba(31, 31, 39, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(70, 69, 84, 0.3);
+}
+
+.text-glow {
+  text-shadow: 0 0 10px rgba(192, 193, 255, 0.3);
+}
+
+/* Custom Scrollbar Styles for Dark Mode */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #13131b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #34343d;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #464554;
+}
+
+/* Clean Input Styling overrides */
+input, select, textarea {
+  color-scheme: dark;
+}
