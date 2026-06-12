@@ -154,6 +154,69 @@ describe('Budget App Stores', () => {
       expect(zbbAlerts).toHaveLength(0)
     })
 
+    it('triggers alerts for low or overdrawn checking balance', () => {
+      const checking = budgetStore.accounts.find(a => a.id === 'acc-checking')!
+      
+      // 1. Overdrawn
+      checking.balance = -100
+      let alerts = budgetStore.activeAlerts
+      expect(alerts.some(a => a.id === 'checking-overdrawn-acc-checking')).toBe(true)
+
+      // 2. Low balance
+      checking.balance = 500000
+      alerts = budgetStore.activeAlerts
+      expect(alerts.some(a => a.id === 'checking-low-acc-checking')).toBe(true)
+    })
+
+    it('triggers alerts for low wallet cash with configurable thresholds', () => {
+      const cash = budgetStore.accounts.find(a => a.id === 'acc-cash')!
+      
+      // Below default threshold (100k)
+      cash.balance = 50000
+      let alerts = budgetStore.activeAlerts
+      expect(alerts.some(a => a.id === 'cash-low-acc-cash')).toBe(true)
+
+      // Below custom threshold
+      settingsStore.lowCashThreshold = 30000
+      alerts = budgetStore.activeAlerts
+      expect(alerts.some(a => a.id === 'cash-low-acc-cash')).toBe(false)
+    })
+
+    it('triggers alerts for high credit card debt with configurable limits', () => {
+      const cc = budgetStore.accounts.find(a => a.id === 'acc-credit')!
+      
+      // Exceeds default limit (5M debt, i.e. balance < -5M)
+      cc.balance = -6000000
+      let alerts = budgetStore.activeAlerts
+      expect(alerts.some(a => a.id === 'cc-debt-high-acc-credit')).toBe(true)
+
+      // Within custom limit
+      settingsStore.maxDebtLimit = 8000000
+      alerts = budgetStore.activeAlerts
+      expect(alerts.some(a => a.id === 'cc-debt-high-acc-credit')).toBe(false)
+    })
+
+    it('triggers emergency fund missing alert when expenses are planned but emergency fund has zero allocation', () => {
+      // Clear planned budget for emergency fund
+      const emgBudget = budgetStore.budgets.find(b => b.categoryId === 'cat-sav-emg' && b.month === '2026-06')!
+      emgBudget.planned = 0
+      
+      const alerts = budgetStore.activeAlerts
+      expect(alerts.some(a => a.id === 'emergency-fund-missing')).toBe(true)
+    })
+
+    it('triggers savings rate alert when rate falls below configurable minimum target', () => {
+      // By default savings rate is 13% (savings/debt actual 1,638,000 / inflow 12,625,000)
+      // Check that at default minSavingsRate (10%) there is no alert
+      let alerts = budgetStore.activeAlerts
+      expect(alerts.some(a => a.id === 'low-savings-rate')).toBe(false)
+
+      // Increase min savings rate target to 15% (which is > 13%)
+      settingsStore.minSavingsRate = 15
+      alerts = budgetStore.activeAlerts
+      expect(alerts.some(a => a.id === 'low-savings-rate')).toBe(true)
+    })
+
     it('bankSummaries groups accounts by bank', () => {
       const summaries = budgetStore.bankSummaries
       expect(summaries.length).toBe(budgetStore.banks.length)
@@ -173,6 +236,25 @@ describe('Budget App Stores', () => {
         expect(s).toHaveProperty('offset')
         expect(s).toHaveProperty('percentage')
       })
+    })
+
+    it('filteredLedger returns transactions sorted from newest first, including same-day index order', () => {
+      // Seed checking account
+      budgetStore.accounts = [{ id: 'acc-checking', name: 'Checking Account', type: 'checking', bankId: 'bank-bca', startingBalance: 12500000, balance: 12500000 }]
+      // Seed with some test transactions on the same day and different days
+      budgetStore.transactions = [
+        { id: 'tx-1', date: '2026-06-01', description: 'First', amount: -100, accountId: 'acc-checking', categoryId: 'cat-exp-food', shiftToNextMonth: false },
+        { id: 'tx-2', date: '2026-06-02', description: 'Second', amount: -200, accountId: 'acc-checking', categoryId: 'cat-exp-food', shiftToNextMonth: false },
+        { id: 'tx-3', date: '2026-06-02', description: 'Third', amount: -300, accountId: 'acc-checking', categoryId: 'cat-exp-food', shiftToNextMonth: false },
+        { id: 'tx-4', date: '2026-06-03', description: 'Fourth', amount: -400, accountId: 'acc-checking', categoryId: 'cat-exp-food', shiftToNextMonth: false }
+      ]
+      
+      const ledger = budgetStore.filteredLedger('bank-bca', 'acc-checking')
+      // Expected order:
+      // Newest date first: tx-4 (2026-06-03)
+      // Then same-day newest first: tx-3 (2026-06-02, index 2), then tx-2 (2026-06-02, index 1)
+      // Oldest date last: tx-1 (2026-06-01)
+      expect(ledger.map(t => t.id)).toEqual(['tx-4', 'tx-3', 'tx-2', 'tx-1'])
     })
   })
 

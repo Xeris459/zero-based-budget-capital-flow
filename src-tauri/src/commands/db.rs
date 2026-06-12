@@ -103,6 +103,9 @@ pub fn db_get_initial_data(state: tauri::State<'_, DbState>) -> Result<InitialDa
         is_sidebar_collapsed: get_bool("isSidebarCollapsed", false),
         filter_type: get_string("filterType", "monthly"),
         planner_view: get_string("plannerView", "monthly"),
+        max_debt_limit: get_f64("maxDebtLimit", 5000000.0),
+        min_savings_rate: get_f64("minSavingsRate", 10.0),
+        low_cash_threshold: get_f64("lowCashThreshold", 100000.0),
     })
 }
 

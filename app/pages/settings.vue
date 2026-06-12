@@ -118,13 +118,14 @@
             </div>
           </div>
 
-          <!-- Right Panel: Alerts Warning Threshold -->
+          <!-- Right Panel: Alerts & Warnings -->
           <div class="glass-panel rounded-xl p-6 border border-[#464554]/30 flex flex-col gap-5">
-            <h3 class="text-sm font-bold text-on-surface mb-2">Budget Warnings</h3>
+            <h3 class="text-sm font-bold text-on-surface mb-2">Alerts & Warnings</h3>
 
+            <!-- Warning Threshold -->
             <div class="flex flex-col gap-1.5">
               <div class="flex justify-between items-center mb-1">
-                <label class="text-[10px] font-bold text-on-surface-variant uppercase">Warning Threshold (%)</label>
+                <label class="text-[10px] font-bold text-on-surface-variant uppercase">Category Warning Threshold (%)</label>
                 <span class="text-xs font-extrabold text-primary">{{ Math.round(settingsStore.warningThreshold * 100) }}%</span>
               </div>
               <input
@@ -137,8 +138,61 @@
                 class="w-full accent-primary bg-surface-variant h-1 rounded-lg cursor-pointer"
               />
               <span class="text-[10px] text-on-surface-variant mt-2 leading-relaxed">
-                Set the percentage limit when subcategories trigger a <strong>"Near Limit"</strong> warning flag under notifications and the budget planner panel. (Standard value is 80%).
+                Set the percentage limit when subcategories trigger a <strong>"Near Limit"</strong> warning flag. (Standard value is 80%).
               </span>
+            </div>
+
+            <!-- Cash Flow Notification Settings -->
+            <div class="border-t border-[#464554]/10 pt-4 flex flex-col gap-4">
+              <!-- CC Debt Alert Limit -->
+              <div class="flex flex-col gap-1.5">
+                <label class="text-[10px] font-bold text-on-surface-variant uppercase">Max Credit Card Debt Limit</label>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-on-surface-variant">{{ settingsStore.currencySymbol }}</span>
+                  <input
+                    type="number"
+                    v-model.number="settingsStore.maxDebtLimit"
+                    @change="store.saveState"
+                    placeholder="5.000.000"
+                    class="bg-[#13131b] border border-[#464554]/40 rounded-lg px-3 py-2 text-xs font-bold text-on-surface focus:border-primary focus:ring-0 focus:outline-none w-full"
+                  />
+                </div>
+                <span class="text-[10px] text-on-surface-variant">Trigger a warning when credit card debt exceeds this amount.</span>
+              </div>
+
+              <!-- Savings Rate Limit -->
+              <div class="flex flex-col gap-1.5">
+                <label class="text-[10px] font-bold text-on-surface-variant uppercase">Min Savings Rate Target (%)</label>
+                <div class="flex items-center gap-2">
+                  <input
+                    type="number"
+                    v-model.number="settingsStore.minSavingsRate"
+                    @change="store.saveState"
+                    placeholder="10"
+                    min="0"
+                    max="100"
+                    class="bg-[#13131b] border border-[#464554]/40 rounded-lg px-3 py-2 text-xs font-bold text-on-surface focus:border-primary focus:ring-0 focus:outline-none w-24"
+                  />
+                  <span class="text-xs font-bold text-on-surface-variant">%</span>
+                </div>
+                <span class="text-[10px] text-on-surface-variant">Trigger an alarm when actual savings rate is below this target.</span>
+              </div>
+
+              <!-- Low Wallet Cash Limit -->
+              <div class="flex flex-col gap-1.5">
+                <label class="text-[10px] font-bold text-on-surface-variant uppercase">Low Wallet Cash Threshold</label>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-on-surface-variant">{{ settingsStore.currencySymbol }}</span>
+                  <input
+                    type="number"
+                    v-model.number="settingsStore.lowCashThreshold"
+                    @change="store.saveState"
+                    placeholder="100.000"
+                    class="bg-[#13131b] border border-[#464554]/40 rounded-lg px-3 py-2 text-xs font-bold text-on-surface focus:border-primary focus:ring-0 focus:outline-none w-full"
+                  />
+                </div>
+                <span class="text-[10px] text-on-surface-variant">Trigger a warning when cash wallet falls below this amount.</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1177,6 +1231,9 @@ const exportBackup = () => {
     currencySymbol: settingsStore.currencySymbol,
     warningThreshold: settingsStore.warningThreshold,
     glowEffects: settingsStore.glowEffects,
+    maxDebtLimit: settingsStore.maxDebtLimit,
+    minSavingsRate: settingsStore.minSavingsRate,
+    lowCashThreshold: settingsStore.lowCashThreshold,
     security: securityStore.security
   }
 

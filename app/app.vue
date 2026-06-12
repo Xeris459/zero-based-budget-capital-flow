@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-background text-on-background min-h-screen overflow-x-hidden font-sans select-none antialiased">
+  <div class="bg-background text-on-background min-h-screen overflow-x-clip font-sans select-none antialiased">
     <!-- Left Sidebar -->
     <CommonSidebar v-if="!securityStore.isLocked" />
 

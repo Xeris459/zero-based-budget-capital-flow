@@ -21,7 +21,12 @@
       </div>
 
       <!-- Accordion Grid Content -->
-      <div v-show="group.expanded" class="p-5 overflow-x-auto bg-surface-container-lowest/30">
+      <div
+        v-show="group.expanded"
+        :ref="el => { if (el) tableScrollRefs[group.id] = el }"
+        class="p-5 overflow-x-auto bg-surface-container-lowest/30"
+        @scroll="handleScroll($event, group.id)"
+      >
         <table class="w-full text-left border-collapse min-w-[1690px]">
           <thead>
             <tr class="border-b border-[#464554]/25 bg-surface-container-low/40">
@@ -161,6 +166,7 @@
                 </div>
               </td>
             </tr>
+
           </tbody>
         </table>
       </div>
@@ -169,7 +175,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useBudgetStore } from '~/stores/budget'
 import { useSettingsStore } from '~/stores/settings'
 import { ChevronDown, ChevronRight, Edit2, Trash2, Plus } from '@lucide/vue'
@@ -293,4 +299,49 @@ const saveNewCategory = (groupId) => {
 const vFocus = {
   mounted: (el) => el.focus()
 }
+
+// Scroll Synchronization setup
+const tableScrollRefs = {}
+let lastScrollLeft = 0
+
+const handleScroll = (event, groupId) => {
+  const scrollLeft = event.target.scrollLeft
+  
+  // Update other tables in this component
+  Object.keys(tableScrollRefs).forEach(id => {
+    if (id !== groupId && tableScrollRefs[id]) {
+      if (Math.abs(tableScrollRefs[id].scrollLeft - scrollLeft) > 0.5) {
+        tableScrollRefs[id].scrollLeft = scrollLeft
+      }
+    }
+  })
+  
+  // Dispatch event for ZBB ribbon
+  if (Math.abs(lastScrollLeft - scrollLeft) > 0.5) {
+    lastScrollLeft = scrollLeft
+    window.dispatchEvent(new CustomEvent('sync-yearly-scroll', { 
+      detail: { scrollLeft, source: groupId } 
+    }))
+  }
+}
+
+const handleGlobalSync = (event) => {
+  const { scrollLeft, source } = event.detail
+  if (source === 'zbb' && Math.abs(lastScrollLeft - scrollLeft) > 0.5) {
+    lastScrollLeft = scrollLeft
+    Object.keys(tableScrollRefs).forEach(id => {
+      if (tableScrollRefs[id] && Math.abs(tableScrollRefs[id].scrollLeft - scrollLeft) > 0.5) {
+        tableScrollRefs[id].scrollLeft = scrollLeft
+      }
+    })
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('sync-yearly-scroll', handleGlobalSync)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('sync-yearly-scroll', handleGlobalSync)
+})
 </script>

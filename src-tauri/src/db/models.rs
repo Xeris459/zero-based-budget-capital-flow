@@ -78,4 +78,10 @@ pub struct InitialData {
     pub filter_type: String,
     #[serde(rename = "plannerView")]
     pub planner_view: String,
+    #[serde(rename = "maxDebtLimit")]
+    pub max_debt_limit: f64,
+    #[serde(rename = "minSavingsRate")]
+    pub min_savings_rate: f64,
+    #[serde(rename = "lowCashThreshold")]
+    pub low_cash_threshold: f64,
 }

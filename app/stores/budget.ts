@@ -508,7 +508,14 @@ export const useBudgetStore = defineStore('budget', {
           const matchesAccount = accountId === 'all' || t.accountId === accountId
 
           return matchesBank && matchesAccount
-        }).sort((a, b) => b.date.localeCompare(a.date))
+        }).sort((a, b) => {
+          const dateComp = b.date.localeCompare(a.date)
+          if (dateComp !== 0) return dateComp
+          
+          const idxA = state.transactions.indexOf(a)
+          const idxB = state.transactions.indexOf(b)
+          return idxB - idxA
+        })
       }
     },
 
@@ -593,6 +600,90 @@ export const useBudgetStore = defineStore('budget', {
         })
       }
 
+      // 4. Checking Account Balance Check
+      this.accounts.forEach(acc => {
+        if (acc.type === 'checking') {
+          if (acc.balance < 0) {
+            alerts.push({
+              id: `checking-overdrawn-${acc.id}`,
+              type: 'error',
+              title: 'Checking Account Overdrawn',
+              description: `Your checking account "${acc.name}" is overdrawn. Current balance: ${formatIndonesianHuman(acc.balance)}.`
+            })
+          } else if (acc.balance < 1000000) {
+            alerts.push({
+              id: `checking-low-${acc.id}`,
+              type: 'warning',
+              title: 'Low Checking Balance',
+              description: `Your checking account "${acc.name}" has a low balance of ${formatIndonesianHuman(acc.balance)}. Consider transferring funds.`
+            })
+          }
+        }
+      })
+
+      // 5. Wallet Cash Alert
+      this.accounts.forEach(acc => {
+        if (acc.type === 'cash') {
+          if (acc.balance < settingsStore.lowCashThreshold) {
+            alerts.push({
+              id: `cash-low-${acc.id}`,
+              type: 'warning',
+              title: 'Low Wallet Cash',
+              description: `Your cash wallet "${acc.name}" is running low: ${formatIndonesianHuman(acc.balance)}. Consider withdrawing some cash.`
+            })
+          }
+        }
+      })
+
+      // 6. Credit Card High Debt Alert
+      this.accounts.forEach(acc => {
+        if (acc.type === 'credit_card') {
+          if (acc.balance < -settingsStore.maxDebtLimit) {
+            alerts.push({
+              id: `cc-debt-high-${acc.id}`,
+              type: 'warning',
+              title: 'High Credit Card Debt',
+              description: `Your credit card "${acc.name}" has high debt of ${formatIndonesianHuman(Math.abs(acc.balance))}, exceeding your limit of ${formatIndonesianHuman(settingsStore.maxDebtLimit)}.`
+            })
+          }
+        }
+      })
+
+      // 7. Emergency Fund Missing Alert
+      const emergencyCat = this.categories.find(c => c.id === 'cat-sav-emg' || c.name.toLowerCase().includes('emergency fund'))
+      let emergencyPlanned = 0
+      if (emergencyCat) {
+        emergencyPlanned = this.budgets
+          .filter(b => settingsStore.filterType === 'yearly' ? b.month.startsWith(settingsStore.currentYear) : b.month === activeMonthStr)
+          .filter(b => b.categoryId === emergencyCat.id)
+          .reduce((sum, b) => sum + b.planned, 0)
+      }
+      if (this.totalPlannedSpending > 0 && emergencyPlanned === 0) {
+        alerts.push({
+          id: 'emergency-fund-missing',
+          type: 'warning',
+          title: 'Emergency Fund Missing',
+          description: 'You have planned expenses but have not allocated any funds to your Emergency Fund this period.'
+        })
+      }
+
+      // 8. Savings Rate Alarm
+      const actualInflow = this.periodTransactions
+        .filter(t => {
+          const cat = this.categories.find(c => c.id === t.categoryId)
+          return cat && cat.parentId === 'income'
+        })
+        .reduce((sum, t) => sum + t.amount, 0)
+
+      if (actualInflow > 0 && this.savingsRate < settingsStore.minSavingsRate) {
+        alerts.push({
+          id: 'low-savings-rate',
+          type: 'warning',
+          title: 'Low Savings Rate',
+          description: `Your actual savings rate is ${this.savingsRate}%, which is below your target of ${settingsStore.minSavingsRate}%.`
+        })
+      }
+
       // Default success alert if completely balanced and no warnings
       if (alerts.length === 0) {
         alerts.push({
@@ -658,6 +749,9 @@ export const useBudgetStore = defineStore('budget', {
           if (data.isSidebarCollapsed !== undefined) settingsStore.isSidebarCollapsed = data.isSidebarCollapsed
           if (data.filterType !== undefined) settingsStore.filterType = data.filterType
           if (data.plannerView !== undefined) settingsStore.plannerView = data.plannerView
+          if (data.maxDebtLimit !== undefined) settingsStore.maxDebtLimit = data.maxDebtLimit
+          if (data.minSavingsRate !== undefined) settingsStore.minSavingsRate = data.minSavingsRate
+          if (data.lowCashThreshold !== undefined) settingsStore.lowCashThreshold = data.lowCashThreshold
           
           const securityStore = useSecurityStore()
           if (data.security !== undefined) {
@@ -704,6 +798,9 @@ export const useBudgetStore = defineStore('budget', {
           isSidebarCollapsed: settingsStore.isSidebarCollapsed,
           filterType: settingsStore.filterType,
           plannerView: settingsStore.plannerView,
+          maxDebtLimit: settingsStore.maxDebtLimit,
+          minSavingsRate: settingsStore.minSavingsRate,
+          lowCashThreshold: settingsStore.lowCashThreshold,
           security: securityStore.security
         }))
 
@@ -723,6 +820,9 @@ export const useBudgetStore = defineStore('budget', {
               await safeInvoke('db_save_config', { key: 'isSidebarCollapsed', value: settingsStore.isSidebarCollapsed.toString() })
               await safeInvoke('db_save_config', { key: 'filterType', value: settingsStore.filterType })
               await safeInvoke('db_save_config', { key: 'plannerView', value: settingsStore.plannerView })
+              await safeInvoke('db_save_config', { key: 'maxDebtLimit', value: settingsStore.maxDebtLimit.toString() })
+              await safeInvoke('db_save_config', { key: 'minSavingsRate', value: settingsStore.minSavingsRate.toString() })
+              await safeInvoke('db_save_config', { key: 'lowCashThreshold', value: settingsStore.lowCashThreshold.toString() })
               
               // Automatically sync the OS keyring credentials
               await securityStore.syncKeyring()
@@ -1111,6 +1211,9 @@ export const useBudgetStore = defineStore('budget', {
         if (importedState.glowEffects !== undefined) settingsStore.glowEffects = importedState.glowEffects
         if (importedState.currentMonth !== undefined) settingsStore.currentMonth = importedState.currentMonth
         if (importedState.currentYear !== undefined) settingsStore.currentYear = importedState.currentYear
+        if (importedState.maxDebtLimit !== undefined) settingsStore.maxDebtLimit = importedState.maxDebtLimit
+        if (importedState.minSavingsRate !== undefined) settingsStore.minSavingsRate = importedState.minSavingsRate
+        if (importedState.lowCashThreshold !== undefined) settingsStore.lowCashThreshold = importedState.lowCashThreshold
         
         const securityStore = useSecurityStore()
         if (importedState.security !== undefined) {

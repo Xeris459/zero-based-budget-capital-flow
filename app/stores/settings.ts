@@ -24,6 +24,9 @@ export interface SettingsState {
   isTauri: boolean
   filterType: 'monthly' | 'yearly'
   plannerView: 'monthly' | 'yearly'
+  maxDebtLimit: number
+  minSavingsRate: number
+  lowCashThreshold: number
 }
 
 export const useSettingsStore = defineStore('settings', {
@@ -37,7 +40,10 @@ export const useSettingsStore = defineStore('settings', {
     isSidebarCollapsed: false,
     isTauri: false,
     filterType: 'monthly',
-    plannerView: 'monthly'
+    plannerView: 'monthly',
+    maxDebtLimit: 5000000,
+    minSavingsRate: 10,
+    lowCashThreshold: 100000
   }),
 
   getters: {
@@ -129,6 +135,9 @@ export const useSettingsStore = defineStore('settings', {
       if (parsedPayload.isSidebarCollapsed !== undefined) this.isSidebarCollapsed = parsedPayload.isSidebarCollapsed
       if (parsedPayload.filterType !== undefined) this.filterType = parsedPayload.filterType
       if (parsedPayload.plannerView !== undefined) this.plannerView = parsedPayload.plannerView
+      if (parsedPayload.maxDebtLimit !== undefined) this.maxDebtLimit = parsedPayload.maxDebtLimit
+      if (parsedPayload.minSavingsRate !== undefined) this.minSavingsRate = parsedPayload.minSavingsRate
+      if (parsedPayload.lowCashThreshold !== undefined) this.lowCashThreshold = parsedPayload.lowCashThreshold
     },
 
     async toggleKMode() {
