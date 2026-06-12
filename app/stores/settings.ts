@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import type { SettingsState } from '~/types'
 
 async function safeInvoke<T>(cmd: string, args?: any): Promise<T | null> {
   if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
@@ -11,22 +12,6 @@ async function safeInvoke<T>(cmd: string, args?: any): Promise<T | null> {
     }
   }
   return null
-}
-
-export interface SettingsState {
-  kMode: boolean
-  currentMonth: string
-  currentYear: string
-  currencySymbol: string
-  warningThreshold: number
-  glowEffects: boolean
-  isSidebarCollapsed: boolean
-  isTauri: boolean
-  filterType: 'monthly' | 'yearly'
-  plannerView: 'monthly' | 'yearly'
-  maxDebtLimit: number
-  minSavingsRate: number
-  lowCashThreshold: number
 }
 
 export const useSettingsStore = defineStore('settings', {

@@ -5,6 +5,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useBudgetStore } from '~/stores/budget'
 import { useSettingsStore } from '~/stores/settings'
+import { populateMockData } from '../mockData'
 
 describe('Budget Store — Yearly Filtering', () => {
   let store: ReturnType<typeof useBudgetStore>
@@ -14,7 +15,7 @@ describe('Budget Store — Yearly Filtering', () => {
     setActivePinia(createPinia())
     store = useBudgetStore()
     settingsStore = useSettingsStore()
-    store.loadDefaults()
+    populateMockData(store)
   })
 
   it('aggregates transactions yearly when filterType is yearly', () => {

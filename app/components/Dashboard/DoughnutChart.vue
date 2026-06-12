@@ -1,5 +1,5 @@
 <template>
-  <div class="glass-panel rounded-xl p-card-padding flex flex-col items-center relative select-none">
+  <div class="glass-panel rounded-xl p-4 sm:p-5 flex flex-col items-center relative select-none">
     <div class="w-full flex items-center justify-between mb-4">
       <h3 class="text-sm font-bold text-on-surface">{{ title }}</h3>
       <span class="text-[9px] font-bold text-on-surface-variant bg-surface-container px-2.5 py-1 rounded-full">

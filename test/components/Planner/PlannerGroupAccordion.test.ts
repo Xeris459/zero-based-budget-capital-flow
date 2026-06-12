@@ -6,6 +6,7 @@ import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { useBudgetStore } from '~/stores/budget'
 import PlannerGroupAccordion from '~/components/Planner/PlannerGroupAccordion.vue'
+import { populateMockData } from '../../mockData'
 
 const iconStub = { template: '<span />' }
 
@@ -33,7 +34,7 @@ describe('PlannerGroupAccordion.vue', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     store = useBudgetStore()
-    store.loadDefaults()
+    populateMockData(store)
   })
 
   it('renders group name', () => {

@@ -1,5 +1,5 @@
 <template>
-  <div class="glass-panel rounded-xl p-card-padding flex flex-col relative overflow-hidden w-full select-none">
+  <div class="glass-panel rounded-xl p-4 sm:p-5 flex flex-col relative overflow-hidden w-full select-none">
     <!-- Header -->
     <div class="flex items-center justify-between mb-4 border-b border-[#464554]/25 pb-4">
       <div class="flex flex-col">

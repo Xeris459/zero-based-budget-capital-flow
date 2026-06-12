@@ -7,6 +7,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useBudgetStore } from '~/stores/budget'
 import TransactionModal from '~/components/Transactions/TransactionModal.vue'
 import { nextTick } from 'vue'
+import { populateMockData } from '../../mockData'
 
 const iconStub = { template: '<span />' }
 
@@ -32,7 +33,7 @@ describe('TransactionModal.vue', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     store = useBudgetStore()
-    store.loadDefaults()
+    populateMockData(store)
   })
 
   it('renders "Add New Transaction" title when no transaction prop', async () => {

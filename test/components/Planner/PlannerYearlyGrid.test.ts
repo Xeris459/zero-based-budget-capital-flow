@@ -7,6 +7,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useBudgetStore } from '~/stores/budget'
 import { useSettingsStore } from '~/stores/settings'
 import PlannerYearlyGrid from '~/components/Planner/PlannerYearlyGrid.vue'
+import { populateMockData } from '../../mockData'
 
 const iconStub = { template: '<span />' }
 
@@ -32,7 +33,7 @@ describe('PlannerYearlyGrid.vue', () => {
     setActivePinia(createPinia())
     store = useBudgetStore()
     settingsStore = useSettingsStore()
-    store.loadDefaults()
+    populateMockData(store)
   })
 
   it('renders all 4 budget groups accordions', () => {

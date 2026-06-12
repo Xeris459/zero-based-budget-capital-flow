@@ -1,46 +1,7 @@
 import { defineStore } from 'pinia'
 import { useSettingsStore } from './settings'
 import { useSecurityStore } from './security'
-
-// Types
-export interface Bank {
-  id: string
-  name: string
-  code: string
-  color: string // Tailwind color class or hex
-}
-
-export interface Account {
-  id: string
-  name: string
-  type: 'checking' | 'savings' | 'credit_card' | 'cash'
-  bankId: string
-  startingBalance: number
-  balance: number
-}
-
-export interface Category {
-  id: string
-  name: string
-  parentId: 'income' | 'expenses' | 'savings' | 'debt'
-}
-
-export interface Budget {
-  month: string // YYYY-MM
-  categoryId: string
-  planned: number
-}
-
-export interface Transaction {
-  id: string
-  date: string // YYYY-MM-DD
-  description: string
-  amount: number // positive for inflow, negative for outflow
-  accountId: string
-  categoryId: string // references Category.id
-  shiftToNextMonth: boolean
-  transferId?: string // linked transaction ID for transfers
-}
+import type { Bank, Account, Category, Budget, Transaction, AppState } from '~/types'
 
 async function safeInvoke<T>(cmd: string, args?: any): Promise<T | null> {
   if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
@@ -55,112 +16,7 @@ async function safeInvoke<T>(cmd: string, args?: any): Promise<T | null> {
   return null
 }
 
-export interface AppState {
-  banks: Bank[]
-  accounts: Account[]
-  categories: Category[]
-  budgets: Budget[]
-  transactions: Transaction[]
-}
 
-// Default Seed Data
-const DEFAULT_BANKS: Bank[] = [
-  { id: 'bank-bca', name: 'Bank BCA', code: 'BCA', color: '#6366f1' }, // Indigo
-  { id: 'bank-jago', name: 'Bank Jago', code: 'Jago', color: '#4edea3' }, // Emerald
-  { id: 'bank-mandiri', name: 'Bank Mandiri', code: 'Mandiri', color: '#ffb95f' }, // Amber
-  { id: 'bank-cash', name: 'Pocket Cash', code: 'CASH', color: '#908fa0' } // Slate
-]
-
-const DEFAULT_ACCOUNTS: Account[] = [
-  { id: 'acc-checking', name: 'Checking Account', type: 'checking', bankId: 'bank-bca', startingBalance: 12500000, balance: 12500000 },
-  { id: 'acc-savings', name: 'High-Yield Savings', type: 'savings', bankId: 'bank-jago', startingBalance: 30000000, balance: 30000000 },
-  { id: 'acc-credit', name: 'Reward Credit Card', type: 'credit_card', bankId: 'bank-mandiri', startingBalance: -2700000, balance: -2700000 },
-  { id: 'acc-cash', name: 'Wallet Cash', type: 'cash', bankId: 'bank-cash', startingBalance: 5400000, balance: 5400000 }
-]
-
-const DEFAULT_CATEGORIES: Category[] = [
-  // Income Sources
-  { id: 'cat-inc-salary', name: 'Primary Salary', parentId: 'income' },
-  { id: 'cat-inc-side', name: 'Side Hustle', parentId: 'income' },
-  { id: 'cat-inc-div', name: 'Dividends', parentId: 'income' },
-
-  // Expenses
-  { id: 'cat-exp-housing', name: 'Housing', parentId: 'expenses' },
-  { id: 'cat-exp-food', name: 'Food', parentId: 'expenses' },
-  { id: 'cat-exp-utils', name: 'Utilities', parentId: 'expenses' },
-  { id: 'cat-exp-ent', name: 'Entertainment', parentId: 'expenses' },
-
-  // Savings Goals
-  { id: 'cat-sav-emg', name: 'Emergency Fund', parentId: 'savings' },
-  { id: 'cat-sav-ret', name: 'Retirement', parentId: 'savings' },
-  { id: 'cat-sav-vac', name: 'Vacation', parentId: 'savings' },
-  { id: 'cat-sav-car', name: 'New Car', parentId: 'savings' },
-
-  // Debt Payments
-  { id: 'cat-debt-cc', name: 'Credit Card Payment', parentId: 'debt' }
-]
-
-// Budget allocations for 2026-06 (Total Planned Income = Rp 15.000.000, Total Assigned = Rp 15.000.000)
-const DEFAULT_BUDGETS: Budget[] = [
-  // Income Plans
-  { month: '2026-06', categoryId: 'cat-inc-salary', planned: 10000000 },
-  { month: '2026-06', categoryId: 'cat-inc-side', planned: 3500000 },
-  { month: '2026-06', categoryId: 'cat-inc-div', planned: 1500000 },
-
-  // Expense Plans
-  { month: '2026-06', categoryId: 'cat-exp-housing', planned: 5000000 },
-  { month: '2026-06', categoryId: 'cat-exp-food', planned: 2500000 },
-  { month: '2026-06', categoryId: 'cat-exp-utils', planned: 1500000 },
-  { month: '2026-06', categoryId: 'cat-exp-ent', planned: 1000000 },
-
-  // Savings Plans
-  { month: '2026-06', categoryId: 'cat-sav-emg', planned: 1000000 },
-  { month: '2026-06', categoryId: 'cat-sav-ret', planned: 1000000 },
-  { month: '2026-06', categoryId: 'cat-sav-vac', planned: 300000 },
-  { month: '2026-06', categoryId: 'cat-sav-car', planned: 200000 },
-
-  // Debt Payoff Plans
-  { month: '2026-06', categoryId: 'cat-debt-cc', planned: 2500000 }
-]
-
-// Transactions for 2026-06 (Total spent: Rp 6.300K)
-// Sum of spent: Housing (Rp 2.205K), Food (Rp 1.260K), Utilities (Rp 756K), Savings (Rp 1.008K), Debt (Rp 630K), Entertainment (Rp 441K)
-const DEFAULT_TRANSACTIONS: Transaction[] = [
-  // June Incomes (Actual)
-  { id: 'tx-inc-1', date: '2026-06-01', description: 'Monthly Salary Paycheck', amount: 10000000, accountId: 'acc-checking', categoryId: 'cat-inc-salary', shiftToNextMonth: false },
-  { id: 'tx-inc-2', date: '2026-06-03', description: 'Side Hustle Coding Project', amount: 2625000, accountId: 'acc-checking', categoryId: 'cat-inc-side', shiftToNextMonth: false }, // 75% of planned 3.5M
-  { id: 'tx-inc-3', date: '2026-06-05', description: 'Dividends Pay', amount: 750000, accountId: 'acc-savings', categoryId: 'cat-inc-div', shiftToNextMonth: false }, // 50% of planned 1.5M
-
-  // June Spent
-  // Housing (Rp 2.205K spent)
-  { id: 'tx-exp-1', date: '2026-06-02', description: 'Apartment Rental Payment', amount: -2205000, accountId: 'acc-checking', categoryId: 'cat-exp-housing', shiftToNextMonth: false },
-
-  // Food (Rp 1.260K spent)
-  { id: 'tx-exp-2', date: '2026-06-04', description: 'Supermarket Groceries', amount: -650000, accountId: 'acc-checking', categoryId: 'cat-exp-food', shiftToNextMonth: false },
-  { id: 'tx-exp-3', date: '2026-06-07', description: 'Weekend Restaurant Outing', amount: -610000, accountId: 'acc-cash', categoryId: 'cat-exp-food', shiftToNextMonth: false },
-
-  // Utilities (Rp 756K spent)
-  { id: 'tx-exp-4', date: '2026-06-05', description: 'Electricity & Wifi Bill', amount: -756000, accountId: 'acc-checking', categoryId: 'cat-exp-utils', shiftToNextMonth: false },
-
-  // Savings (Rp 1.008K spent)
-  { id: 'tx-exp-5', date: '2026-06-06', description: 'Emergency Fund Transfer', amount: -1008000, accountId: 'acc-savings', categoryId: 'cat-sav-emg', shiftToNextMonth: false },
-
-  // Debt Payment (Rp 630K spent)
-  { id: 'tx-exp-6', date: '2026-06-08', description: 'Minimum Credit Card Pay', amount: -630000, accountId: 'acc-checking', categoryId: 'cat-debt-cc', shiftToNextMonth: false },
-
-  // Entertainment (Rp 441K spent)
-  { id: 'tx-exp-7', date: '2026-06-09', description: 'Cinema Tickets & Snacks', amount: -441000, accountId: 'acc-cash', categoryId: 'cat-exp-ent', shiftToNextMonth: false },
-
-  // Seed some historic transactions (May 2026) for Trend Charts
-  // May Inflows
-  { id: 'tx-may-inc-1', date: '2026-05-01', description: 'Salary May', amount: 10000000, accountId: 'acc-checking', categoryId: 'cat-inc-salary', shiftToNextMonth: false },
-  { id: 'tx-may-inc-2', date: '2026-05-04', description: 'Freelance May', amount: 3000000, accountId: 'acc-checking', categoryId: 'cat-inc-side', shiftToNextMonth: false },
-  // May Outflows
-  { id: 'tx-may-exp-1', date: '2026-05-02', description: 'Rent May', amount: -5000000, accountId: 'acc-checking', categoryId: 'cat-exp-housing', shiftToNextMonth: false },
-  { id: 'tx-may-exp-2', date: '2026-05-05', description: 'Food May', amount: -2200000, accountId: 'acc-checking', categoryId: 'cat-exp-food', shiftToNextMonth: false },
-  { id: 'tx-may-exp-3', date: '2026-05-06', description: 'Internet May', amount: -800000, accountId: 'acc-checking', categoryId: 'cat-exp-utils', shiftToNextMonth: false },
-  { id: 'tx-may-exp-4', date: '2026-05-10', description: 'Saving May', amount: -1500000, accountId: 'acc-savings', categoryId: 'cat-sav-emg', shiftToNextMonth: false }
-]
 
 export const useBudgetStore = defineStore('budget', {
   state: (): AppState => {
@@ -699,35 +555,6 @@ export const useBudgetStore = defineStore('budget', {
   },
 
   actions: {
-    // Load defaults seeds
-    loadDefaults() {
-      this.banks = JSON.parse(JSON.stringify(DEFAULT_BANKS))
-      this.accounts = JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS))
-      this.categories = JSON.parse(JSON.stringify(DEFAULT_CATEGORIES))
-      this.budgets = JSON.parse(JSON.stringify(DEFAULT_BUDGETS))
-      this.transactions = JSON.parse(JSON.stringify(DEFAULT_TRANSACTIONS))
-      
-      const settingsStore = useSettingsStore()
-      settingsStore.currencySymbol = 'Rp'
-      settingsStore.warningThreshold = 0.8
-      settingsStore.glowEffects = true
-      
-      const securityStore = useSecurityStore()
-      securityStore.isLocked = false
-      securityStore.isPinSetupRequired = false
-      securityStore.security = {
-        passwordEnabled: false,
-        pinEnabled: false,
-        patternEnabled: false,
-        fingerprintEnabled: false,
-        faceEnabled: false,
-        passwordVal: '',
-        pinVal: '',
-        patternVal: ''
-      }
-      this.recalculateAccountBalances()
-    },
-
     // Load full state from Tauri SQLite
     async loadTauriState() {
       try {
@@ -758,10 +585,6 @@ export const useBudgetStore = defineStore('budget', {
             securityStore.security = data.security
           }
           this.recalculateAccountBalances()
-        } else {
-          // If no state exists in database yet, seed defaults and save
-          this.loadDefaults()
-          await this.saveState()
         }
       } catch (e) {
         console.error('Failed to load Tauri DB state:', e)
@@ -1185,7 +1008,11 @@ export const useBudgetStore = defineStore('budget', {
     resetDatabase() {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('zbb_data')
-        this.loadDefaults()
+        this.banks = []
+        this.accounts = []
+        this.categories = []
+        this.budgets = []
+        this.transactions = []
         this.saveState()
       }
     },

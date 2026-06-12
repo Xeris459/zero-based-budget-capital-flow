@@ -8,6 +8,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useBudgetStore } from '~/stores/budget'
 import { useSettingsStore } from '~/stores/settings'
 import { useSecurityStore } from '~/stores/security'
+import { populateMockData } from '../mockData'
 
 describe('Budget App Stores', () => {
   let budgetStore: ReturnType<typeof useBudgetStore>
@@ -45,14 +46,14 @@ describe('Budget App Stores', () => {
   // ── loadState / saveState ─────────────────────────────────────────────
 
   describe('loadState()', () => {
-    it('seeds default data when localStorage is empty', async () => {
+    it('does not seed default data when localStorage is empty', async () => {
       await securityStore.loadState()
 
-      expect(budgetStore.banks.length).toBeGreaterThan(0)
-      expect(budgetStore.accounts.length).toBeGreaterThan(0)
-      expect(budgetStore.categories.length).toBeGreaterThan(0)
-      expect(budgetStore.budgets.length).toBeGreaterThan(0)
-      expect(budgetStore.transactions.length).toBeGreaterThan(0)
+      expect(budgetStore.banks.length).toBe(0)
+      expect(budgetStore.accounts.length).toBe(0)
+      expect(budgetStore.categories.length).toBe(0)
+      expect(budgetStore.budgets.length).toBe(0)
+      expect(budgetStore.transactions.length).toBe(0)
     })
 
     it('restores persisted data from localStorage', async () => {
@@ -80,7 +81,8 @@ describe('Budget App Stores', () => {
 
   describe('saveState()', () => {
     it('serializes state to localStorage', async () => {
-      await securityStore.loadState() // seed defaults
+      await securityStore.loadState()
+      populateMockData(budgetStore)
       await budgetStore.saveState()
 
       const stored = localStorage.getItem('zbb_data')
@@ -97,7 +99,8 @@ describe('Budget App Stores', () => {
 
   describe('Getters', () => {
     beforeEach(async () => {
-      await securityStore.loadState() // seed with defaults
+      await securityStore.loadState()
+      populateMockData(budgetStore)
     })
 
     it('activePeriod returns YYYY-MM', () => {
@@ -263,6 +266,7 @@ describe('Budget App Stores', () => {
   describe('Actions', () => {
     beforeEach(async () => {
       await securityStore.loadState()
+      populateMockData(budgetStore)
     })
 
     it('addTransaction() pushes a new transaction and recalculates', async () => {
@@ -389,6 +393,7 @@ describe('Budget App Stores', () => {
   describe('Formatting', () => {
     beforeEach(async () => {
       await securityStore.loadState()
+      populateMockData(budgetStore)
     })
 
     it('formatValue() returns K-suffixed value when kMode is on', () => {

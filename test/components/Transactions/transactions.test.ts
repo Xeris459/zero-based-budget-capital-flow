@@ -5,6 +5,7 @@ import { useBudgetStore } from '~/stores/budget'
 import { useSettingsStore } from '~/stores/settings'
 import TransactionsPage from '~/pages/transactions.vue'
 import { nextTick } from 'vue'
+import { populateMockData } from '../../mockData'
 
 const TransactionsTransactionModalStub = {
   template: '<div />',
@@ -21,7 +22,7 @@ describe('Transactions Page - Running Balance', () => {
     settingsStore = useSettingsStore()
     
     // Seed default configuration/stores
-    store.loadDefaults()
+    populateMockData(store)
   })
 
   const mountPage = () => {

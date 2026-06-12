@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { useSettingsStore } from './settings'
+import type { SecurityConfig, SecurityState } from '~/types'
 
 async function safeInvoke<T>(cmd: string, args?: any): Promise<T | null> {
   if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
@@ -12,23 +13,6 @@ async function safeInvoke<T>(cmd: string, args?: any): Promise<T | null> {
     }
   }
   return null
-}
-
-export interface SecurityConfig {
-  passwordEnabled: boolean
-  pinEnabled: boolean
-  patternEnabled: boolean
-  fingerprintEnabled: boolean
-  faceEnabled: boolean
-  passwordVal: string
-  pinVal: string
-  patternVal: string
-}
-
-export interface SecurityState {
-  isLocked: boolean
-  isPinSetupRequired: boolean
-  security: SecurityConfig
 }
 
 export const useSecurityStore = defineStore('security', {
@@ -59,9 +43,8 @@ export const useSecurityStore = defineStore('security', {
           if (success) {
             this.isPinSetupRequired = false
             this.security.pinVal = pin
-            // Initialize with defaults and save
-            budgetStore.loadDefaults()
-            await budgetStore.saveState()
+            // Load seeded state from backend
+            await budgetStore.loadTauriState()
           }
         } else {
           success = await safeInvoke<boolean>('unlock_db', { pin }) || false
@@ -164,7 +147,6 @@ export const useSecurityStore = defineStore('security', {
               this.isPinSetupRequired = true
               this.isLocked = true
               this.security.pinEnabled = true
-              budgetStore.loadDefaults()
               return
             } else {
               this.isPinSetupRequired = false
@@ -241,8 +223,8 @@ export const useSecurityStore = defineStore('security', {
           }
         }
 
-        budgetStore.loadDefaults()
-        await budgetStore.saveState()
+        // Start with empty/default state if no local storage exists
+        budgetStore.recalculateAccountBalances()
       }
     }
   }

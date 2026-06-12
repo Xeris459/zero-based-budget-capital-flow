@@ -1,5 +1,5 @@
 <template>
-  <div class="glass-panel rounded-xl p-card-padding flex flex-col">
+  <div class="glass-panel rounded-xl p-4 sm:p-5 flex flex-col">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-sm font-bold text-on-surface">Accounts Summary</h3>
       <span class="text-[10px] font-semibold text-primary hover:underline cursor-pointer" @click="navigateToAccounts">Manage</span>

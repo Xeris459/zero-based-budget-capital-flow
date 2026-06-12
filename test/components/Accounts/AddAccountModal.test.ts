@@ -7,6 +7,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useBudgetStore } from '~/stores/budget'
 import AddAccountModal from '~/components/Accounts/AddAccountModal.vue'
 import { nextTick } from 'vue'
+import { populateMockData } from '../../mockData'
 
 const CommonModalStub = {
   template: '<div><slot name="header"/><slot name="body"/><slot name="footer"/></div>',
@@ -30,7 +31,7 @@ describe('AddAccountModal.vue', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     store = useBudgetStore()
-    store.loadDefaults()
+    populateMockData(store)
   })
 
   it('renders all form fields', async () => {

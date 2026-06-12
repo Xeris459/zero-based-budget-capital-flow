@@ -7,6 +7,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useBudgetStore } from '~/stores/budget'
 import { useSettingsStore } from '~/stores/settings'
 import Sidebar from '~/components/Common/Sidebar.vue'
+import { populateMockData } from '../../mockData'
 
 // Mock #imports to control useRoute
 vi.mock('#imports', () => ({
@@ -42,7 +43,7 @@ describe('Sidebar.vue', () => {
     setActivePinia(createPinia())
     store = useBudgetStore()
     settingsStore = useSettingsStore()
-    store.loadDefaults()
+    populateMockData(store)
   })
 
   it('renders app name "Capital Flow"', () => {

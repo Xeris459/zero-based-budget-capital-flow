@@ -7,6 +7,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useBudgetStore } from '~/stores/budget'
 import { useSettingsStore } from '~/stores/settings'
 import ZbbStatusBanner from '~/components/Dashboard/ZbbStatusBanner.vue'
+import { populateMockData } from '../../mockData'
 
 const iconStub = { template: '<span />' }
 
@@ -30,7 +31,7 @@ describe('ZbbStatusBanner.vue', () => {
     setActivePinia(createPinia())
     store = useBudgetStore()
     settingsStore = useSettingsStore()
-    store.loadDefaults()
+    populateMockData(store)
   })
 
   it('shows balanced state when toAssign === 0', () => {

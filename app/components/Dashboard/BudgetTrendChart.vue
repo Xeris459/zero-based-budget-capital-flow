@@ -1,5 +1,5 @@
 <template>
-  <div ref="chartCardRef" class="glass-panel rounded-xl p-card-padding flex flex-col relative">
+  <div ref="chartCardRef" class="glass-panel rounded-xl p-4 sm:p-5 flex flex-col relative">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
       <h3 class="text-xs sm:text-sm font-bold text-on-surface">Budget Tracking (May - Dec {{ settingsStore.currentYear }})</h3>
       <div class="flex items-center gap-3 sm:gap-4 flex-wrap">
@@ -35,7 +35,7 @@
     <!-- Visual Bar Chart Wrapper -->
     <div class="flex-1 w-full overflow-x-auto scrollbar-none">
       <div
-        class="flex items-end justify-between pt-14 pb-2 h-[260px] transition-all duration-300"
+        class="flex items-end justify-between pt-14 pb-2 h-[200px] sm:h-[260px] transition-all duration-300"
         :class="[isScrollable ? 'min-w-[480px] gap-4' : 'w-full gap-1.5 sm:gap-2 px-1']"
       >
         <div v-for="bar in store.barData" :key="bar.label" class="flex flex-col items-center gap-2 flex-1">
@@ -76,7 +76,7 @@
       </div>
     </div>
     
-    <div class="flex justify-center items-center gap-6 mt-6 border-t border-[#464554]/20 pt-4">
+    <div class="flex justify-center items-center gap-6 mt-4 sm:mt-6 border-t border-[#464554]/20 pt-3 sm:pt-4">
       <div class="flex items-center gap-2">
         <div class="w-4 h-4 bg-surface-variant border border-[#464554]/40"></div>
         <span class="text-[10px] text-on-surface-variant font-medium">Expected (Ghost)</span>

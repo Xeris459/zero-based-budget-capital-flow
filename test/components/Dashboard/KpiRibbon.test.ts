@@ -7,6 +7,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useBudgetStore } from '~/stores/budget'
 import { useSettingsStore } from '~/stores/settings'
 import KpiRibbon from '~/components/Dashboard/KpiRibbon.vue'
+import { populateMockData } from '../../mockData'
 
 const iconStub = { template: '<span />' }
 
@@ -32,7 +33,7 @@ describe('KpiRibbon.vue', () => {
     setActivePinia(createPinia())
     store = useBudgetStore()
     settingsStore = useSettingsStore()
-    store.loadDefaults()
+    populateMockData(store)
   })
 
   it('renders Net Worth card with formatted value', () => {

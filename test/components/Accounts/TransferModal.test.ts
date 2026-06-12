@@ -8,6 +8,7 @@ import { useBudgetStore } from '~/stores/budget'
 import { useSettingsStore } from '~/stores/settings'
 import TransferModal from '~/components/Accounts/TransferModal.vue'
 import { nextTick } from 'vue'
+import { populateMockData } from '../../mockData'
 
 const CommonModalStub = {
   template: '<div><slot name="header"/><slot name="body"/><slot name="footer"/></div>',
@@ -34,7 +35,7 @@ describe('TransferModal.vue', () => {
     setActivePinia(createPinia())
     store = useBudgetStore()
     settingsStore = useSettingsStore()
-    store.loadDefaults()
+    populateMockData(store)
     alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
   })
 
