@@ -1,0 +1,56 @@
+pub mod errors;
+pub mod auth {
+    pub mod crypto;
+    pub mod biometrics;
+}
+pub mod db {
+    pub mod manager;
+    pub mod models;
+}
+mod commands;
+
+use crate::db::manager::DbState;
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+  tauri::Builder::default()
+    .manage(DbState::new())
+    .setup(|app| {
+      if cfg!(debug_assertions) {
+        app.handle().plugin(
+          tauri_plugin_log::Builder::default()
+            .level(log::LevelFilter::Info)
+            .build(),
+        )?;
+      }
+      Ok(())
+    })
+    .invoke_handler(tauri::generate_handler![
+      commands::auth::has_pin_setup,
+      commands::auth::register_pin,
+      commands::auth::unlock_db,
+      commands::auth::hash_credential,
+      commands::auth::verify_credential,
+      commands::auth::unlock_db_from_keyring,
+      commands::biometrics::check_biometric_available,
+      commands::biometrics::enable_biometric,
+      commands::biometrics::disable_biometric,
+      commands::biometrics::authenticate_biometric,
+      commands::db::db_get_initial_data,
+      commands::db::db_add_bank,
+      commands::db::db_delete_bank,
+      commands::db::db_add_account,
+      commands::db::db_update_account,
+      commands::db::db_delete_account,
+      commands::db::db_add_category,
+      commands::db::db_delete_category,
+      commands::db::db_set_budget_planned,
+      commands::db::db_reset_current_plan,
+      commands::db::db_add_transaction,
+      commands::db::db_update_transaction,
+      commands::db::db_delete_transaction,
+      commands::db::db_save_config,
+    ])
+    .run(tauri::generate_context!())
+    .expect("error while running tauri application");
+}

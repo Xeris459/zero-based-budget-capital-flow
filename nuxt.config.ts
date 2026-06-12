@@ -4,6 +4,12 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   ssr: false,
 
+  router: {
+    options: {
+      hashMode: true
+    }
+  },
+
   css: [
     '~/assets/css/main.css'
   ],

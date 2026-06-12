@@ -7,7 +7,13 @@
 
         <!-- Modal Content Box -->
         <div
-          class="relative w-full max-w-lg glass-panel bg-[#1f1f27]/90 rounded-2xl p-6 shadow-2xl z-10 border border-[#464554]/40 transform transition-all duration-300 scale-100 flex flex-col max-h-[90vh]"
+          class="relative w-full glass-panel bg-[#1f1f27]/90 rounded-2xl p-6 shadow-2xl z-10 border border-[#464554]/40 transform transition-all duration-300 scale-100 flex flex-col max-h-[90vh]"
+          :class="[
+            size === '2xl' ? 'max-w-2xl' :
+            size === '3xl' ? 'max-w-3xl' :
+            size === 'xl' ? 'max-w-xl' :
+            'max-w-lg'
+          ]"
         >
           <!-- Header -->
           <div class="flex items-center justify-between mb-4 border-b border-[#464554]/30 pb-3">
@@ -41,6 +47,10 @@ defineProps({
   show: {
     type: Boolean,
     required: true
+  },
+  size: {
+    type: String,
+    default: 'lg'
   }
 })
 
