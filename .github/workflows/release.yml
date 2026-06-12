@@ -1,0 +1,104 @@
+name: Release
+
+# Release workflow is intentionally disabled for now.
+# Desktop support: Windows only.
+# Android release will be added later when the mobile pipeline is ready.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  release-windows:
+    name: Release Windows Desktop
+    if: false # Keep disabled until you are ready to publish releases
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10.27.0
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.77.2
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri"
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Build web app
+        run: pnpm build
+
+      - name: Build Windows app
+        run: pnpm tauri:build
+
+      - name: Get version from tag
+        id: get_version
+        shell: bash
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          name: Release ${{ steps.get_version.outputs.version }}
+          body: |
+            ## Release ${{ steps.get_version.outputs.version }}
+
+            ### Downloads
+            - **Windows Desktop**: MSI installer
+            - **Android**: Planned for a future release
+
+            ### Notes
+            This release workflow is currently disabled and only targets Windows desktop builds.
+          draft: false
+          prerelease: false
+          files: |
+            src-tauri/target/release/bundle/msi/*
+            dist/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Placeholder for future Android release support.
+  # Enable only after the Android pipeline is ready.
+  # build-android:
+  #   name: Build Android Release
+  #   if: false
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Setup Android toolchain
+  #       run: echo "TODO: add Android release pipeline"
