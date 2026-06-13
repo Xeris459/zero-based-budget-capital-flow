@@ -79,9 +79,13 @@ fn run_migrations(conn: &rusqlite::Connection) -> Result<(), rusqlite::Error> {
 
 // Seeding default data for premium first-time experience
 fn seed_defaults(conn: &rusqlite::Connection) -> Result<(), rusqlite::Error> {
-    // Check if we already have categories data seeded
-    let count: i64 = conn.query_row("SELECT count(*) FROM categories;", [], |row| row.get(0))?;
-    if count > 0 {
+    // Check if we have already seeded data OR user has explicitly reset (is_seeded flag)
+    let seeded: i64 = conn.query_row(
+        "SELECT count(*) FROM config WHERE key = 'is_seeded' AND value = 'true'",
+        [],
+        |row| row.get(0),
+    )?;
+    if seeded > 0 {
         return Ok(());
     }
 
@@ -190,6 +194,9 @@ fn seed_defaults(conn: &rusqlite::Connection) -> Result<(), rusqlite::Error> {
         conn.execute("INSERT OR IGNORE INTO transactions (id, date, description, amount, account_id, category_id, shift_to_next_month, transfer_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8);", 
             (id, date, desc, *amount, acc_id, cat_id, *shift, xfer_id))?;
     }
+
+    // Mark database as seeded so we never re-seed on subsequent startups
+    conn.execute("INSERT OR REPLACE INTO config (key, value) VALUES ('is_seeded', 'true');", [])?;
 
     Ok(())
 }

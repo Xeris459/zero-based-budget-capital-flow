@@ -1005,16 +1005,31 @@ export const useBudgetStore = defineStore('budget', {
     },
 
     // Reset Database
-    resetDatabase() {
+    async resetDatabase() {
+      const settingsStore = useSettingsStore()
+      const securityStore = useSecurityStore()
+
+      // Wipe SQLite tables in Tauri (this is the persistent storage)
+      if (settingsStore.isTauri && !securityStore.isLocked) {
+        try {
+          await safeInvoke('db_reset_all_data')
+        } catch (e) {
+          console.error('Failed to reset SQLite database:', e)
+          return
+        }
+      }
+
       if (typeof window !== 'undefined') {
         localStorage.removeItem('zbb_data')
-        this.banks = []
-        this.accounts = []
-        this.categories = []
-        this.budgets = []
-        this.transactions = []
-        this.saveState()
       }
+
+      // Clear in-memory state
+      this.banks = []
+      this.accounts = []
+      this.categories = []
+      this.budgets = []
+      this.transactions = []
+      this.saveState()
     },
 
     // Import State

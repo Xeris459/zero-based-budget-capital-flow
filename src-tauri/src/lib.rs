@@ -56,6 +56,7 @@ pub fn run() {
       commands::db::transactions::db_update_transaction,
       commands::db::transactions::db_delete_transaction,
       commands::db::initial::db_save_config,
+      commands::db::reset::db_reset_all_data,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
