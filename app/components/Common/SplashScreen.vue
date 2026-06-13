@@ -1,7 +1,10 @@
 <template>
   <div
-    class="fixed inset-0 z-[1000] bg-[#0b0f15] flex flex-col items-center justify-center transition-all duration-500 ease-out"
-    :class="{ 'opacity-0 scale-95 pointer-events-none': isFading }"
+    class="fixed z-[1000] bg-[#0b0f15] flex flex-col items-center justify-center transition-all duration-500 ease-out"
+    :class="[
+      settingsStore.isTauri ? 'top-8 bottom-0 left-0 right-0 h-[calc(100vh-32px)]' : 'inset-0',
+      { 'opacity-0 scale-95 pointer-events-none': isFading }
+    ]"
   >
     <!-- Background Aura Glow -->
     <div class="absolute w-72 h-72 bg-primary/5 rounded-full blur-3xl animate-pulse"></div>
@@ -40,7 +43,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { Landmark } from '@lucide/vue'
+import { useSettingsStore } from '~/stores/settings'
 
+const settingsStore = useSettingsStore()
 const emit = defineEmits(['finish'])
 
 const progress = ref(0)

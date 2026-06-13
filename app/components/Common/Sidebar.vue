@@ -1,7 +1,10 @@
 <template>
   <aside
-    class="hidden md:flex fixed left-0 top-0 h-screen bg-[#1f1f27]/80 backdrop-blur-xl border-r border-[#464554]/30 flex-col py-3 z-50 transition-all duration-300 select-none overflow-visible"
-    :class="[settingsStore.isSidebarCollapsed ? 'w-[50px]' : 'w-[180px]']"
+    class="hidden md:flex fixed left-0 border-r border-[#464554]/30 flex-col py-3 z-50 transition-all duration-300 select-none overflow-visible"
+    :class="[
+      settingsStore.isSidebarCollapsed ? 'w-[50px]' : 'w-[180px]',
+      settingsStore.isTauri ? 'top-8 h-[calc(100vh-32px)] bg-[#1f1f27]/95' : 'top-0 h-screen bg-[#1f1f27]/80 backdrop-blur-xl'
+    ]"
   >
     <!-- Logo / Brand Header -->
     <div class="px-3 pb-3 mb-2 flex flex-col animate-fade-in" :class="{ 'items-center': settingsStore.isSidebarCollapsed }">

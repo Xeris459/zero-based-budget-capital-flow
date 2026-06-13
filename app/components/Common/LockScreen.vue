@@ -1,5 +1,8 @@
 <template>
-  <div class="fixed inset-0 z-[999] bg-[#0b0f15]/90 backdrop-blur-xl flex flex-col items-center justify-center min-h-screen text-on-surface">
+  <div
+    class="fixed z-[999] bg-[#0b0f15]/90 backdrop-blur-xl flex flex-col items-center justify-center text-on-surface"
+    :class="[settingsStore.isTauri ? 'top-8 bottom-0 left-0 right-0 h-[calc(100vh-32px)] min-h-[calc(100vh-32px)]' : 'inset-0 min-h-screen']"
+  >
     <!-- Main Card -->
     <div
       class="relative w-full max-w-md bg-[#1f1f27]/95 border border-[#464554]/40 rounded-2xl p-5 sm:p-8 shadow-2xl flex flex-col items-center justify-between transition-all duration-300 min-h-[460px] mx-4"

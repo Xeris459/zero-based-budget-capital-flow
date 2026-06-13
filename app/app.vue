@@ -1,12 +1,16 @@
 <template>
   <div class="bg-background text-on-background min-h-screen overflow-x-clip font-sans select-none antialiased">
+    <!-- Custom Titlebar (Tauri Only) -->
+    <CommonTitlebar v-if="settingsStore.isTauri" />
+
     <!-- Left Sidebar -->
     <CommonSidebar v-if="!securityStore.isLocked" />
 
     <!-- Top Header -->
     <header
       v-if="!securityStore.isLocked"
-      class="fixed top-0 right-0 h-16 bg-surface/50 backdrop-blur-md border-b border-[#464554]/30 flex justify-between items-center px-4 md:px-8 z-40 transition-all duration-300"
+      class="fixed right-0 h-16 bg-surface/50 backdrop-blur-md border-b border-[#464554]/30 flex justify-between items-center px-4 md:px-8 z-40 transition-all duration-300"
+      :class="[settingsStore.isTauri ? 'top-8' : 'top-0']"
       :style="{ width: isMobile ? '100%' : (settingsStore.isSidebarCollapsed ? 'calc(100% - 50px)' : 'calc(100% - 180px)') }"
     >
       <div class="flex items-center gap-6">
@@ -99,7 +103,7 @@
 
         <!-- Slide-Over Side Sheet for Notifications -->
         <Teleport to="body">
-          <div v-if="showNotifications" class="fixed inset-0 z-[100] flex justify-end">
+          <div v-if="showNotifications" class="fixed inset-0 z-[100] flex justify-end" :class="[settingsStore.isTauri ? 'top-8' : 'top-0']">
             <!-- Backdrop -->
             <div class="fixed inset-0 bg-[#0b0f15]/80 backdrop-blur-sm transition-opacity" @click="showNotifications = false"></div>
 
@@ -159,7 +163,7 @@
     <!-- Main Content Area -->
     <main
       class="transition-all duration-300"
-      :class="[!securityStore.isLocked ? (isMobile ? 'ml-0 pt-[72px] px-4 pb-20' : (settingsStore.isSidebarCollapsed ? 'ml-[50px] pt-[88px] px-8 pb-12' : 'ml-[180px] pt-[88px] px-8 pb-12')) : 'flex items-center justify-center min-h-screen w-full']"
+      :class="[!securityStore.isLocked ? (isMobile ? (settingsStore.isTauri ? 'ml-0 pt-[104px] px-4 pb-20' : 'ml-0 pt-[72px] px-4 pb-20') : (settingsStore.isSidebarCollapsed ? (settingsStore.isTauri ? 'ml-[50px] pt-[120px] px-8 pb-12' : 'ml-[50px] pt-[88px] px-8 pb-12') : (settingsStore.isTauri ? 'ml-[180px] pt-[120px] px-8 pb-12' : 'ml-[180px] pt-[88px] px-8 pb-12'))) : 'flex items-center justify-center min-h-screen w-full']"
     >
       <NuxtPage v-if="!securityStore.isLocked" />
       <CommonLockScreen v-else />

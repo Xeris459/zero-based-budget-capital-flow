@@ -10,10 +10,13 @@ pub mod db {
 mod commands;
 
 use crate::db::manager::DbState;
+use tauri::Manager;
+use tauri_plugin_decorum::WebviewWindowExt;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .plugin(tauri_plugin_decorum::init())
     .manage(DbState::new())
     .setup(|app| {
       if cfg!(debug_assertions) {
@@ -23,6 +26,9 @@ pub fn run() {
             .build(),
         )?;
       }
+      // Create a custom overlay titlebar (hides native chrome but keeps Snap Layout)
+      let main_window = app.get_webview_window("main").unwrap();
+      main_window.create_overlay_titlebar().unwrap();
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![
