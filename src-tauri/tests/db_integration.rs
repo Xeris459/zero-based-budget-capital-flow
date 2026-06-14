@@ -42,7 +42,7 @@ fn test_db_state_initial_lock() {
 }
 
 #[test]
-fn test_db_unlock_and_migration_seeding() {
+fn test_db_unlock_and_migration_initializes_database() {
     let db_path = get_temp_db_path();
     let _guard = TestDbGuard { path: db_path.clone() };
     
@@ -60,20 +60,22 @@ fn test_db_unlock_and_migration_seeding() {
     let key = state.get_key().expect("Failed to get derived key");
     assert_eq!(key.len(), 32);
     
-    // Query seeded config table
-    let mut config_stmt = conn.prepare("SELECT value FROM config WHERE key = 'currentMonth'").expect("Failed to query config");
-    let mut config_rows = config_stmt.query([]).expect("Failed to execute query");
-    let first_row = config_rows.next().expect("No rows returned").expect("Expected at least one row");
-    let current_month: String = first_row.get(0).expect("Failed to read column");
-    assert_eq!(current_month, "06");
-    
-    // Query seeded banks table (should have 4 banks)
+    // The default backend build starts empty but marks the DB as seeded and
+    // inserts the fallback debt category to keep transfer-related foreign keys valid.
+    let is_seeded: String = conn.query_row(
+        "SELECT value FROM config WHERE key = 'is_seeded'",
+        [],
+        |row| row.get(0),
+    ).expect("Failed to query seeded flag");
+    assert_eq!(is_seeded, "true");
+
+    // Query seeded banks table (default build should stay empty)
     let bank_count: i64 = conn.query_row("SELECT count(*) FROM banks", [], |row| row.get(0)).expect("Failed to count banks");
-    assert_eq!(bank_count, 4);
-    
-    // Query seeded categories (should have 12 categories)
+    assert_eq!(bank_count, 0);
+
+    // Query seeded categories (should have the fallback debt category only)
     let category_count: i64 = conn.query_row("SELECT count(*) FROM categories", [], |row| row.get(0)).expect("Failed to count categories");
-    assert_eq!(category_count, 12);
+    assert_eq!(category_count, 1);
 }
 
 #[test]
