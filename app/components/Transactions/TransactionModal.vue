@@ -65,19 +65,85 @@
             </div>
 
             <!-- Account Selector -->
-            <div class="flex flex-col gap-1.5">
+            <div class="flex flex-col gap-1.5" ref="dropdownContainer">
               <label class="text-[8px] font-black text-on-surface-variant uppercase tracking-wider">Source/Destination Account</label>
-              <div class="relative flex items-center">
-                <CreditCard class="absolute left-3 w-4 h-4 text-on-surface-variant pointer-events-none" />
+              <div class="relative flex flex-col">
+                <!-- Hidden native select for test suites or form integrations -->
                 <select
                   v-model="form.accountId"
-                  class="bg-[#13131b] border border-[#464554]/40 rounded-xl pl-10 pr-4 py-2.5 text-xs font-semibold text-on-surface focus:border-primary focus:ring-1 focus:ring-primary/50 focus:outline-none w-full cursor-pointer"
-                  required
+                  class="hidden"
+                  aria-hidden="true"
                 >
-                  <option v-for="acc in store.accounts" :key="acc.id" :value="acc.id">
-                    {{ acc.name }} ({{ settingsStore.formatValueRaw(acc.balance) }})
+                  <option v-for="acc in availableAccounts" :key="acc.id" :value="acc.id">
+                    {{ getBankCode(acc.bankId) }} — {{ acc.name }} ({{ settingsStore.formatValueRaw(acc.balance) }})
                   </option>
-                </select>
+                </select>                <div class="relative flex items-center">
+                  <CreditCard class="absolute left-3 w-4 h-4 text-on-surface-variant pointer-events-none z-10" />
+                  <button
+                    ref="buttonRef"
+                    type="button"
+                    @click="toggleAccountDropdown"
+                    class="w-full bg-[#13131b] border border-[#464554]/40 rounded-xl pl-10 pr-4 py-2.5 text-left transition-all duration-200 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 relative flex items-center justify-between min-h-[38px] cursor-pointer"
+                    :class="{ 'border-primary ring-1 ring-primary/30': accountDropdownOpen }"
+                  >
+                    <div class="flex items-center gap-2 truncate">
+                      <template v-if="selectedAccount">
+                        <span
+                          class="px-1.5 py-0.5 rounded text-[9px] font-black text-white shadow-sm flex-shrink-0"
+                          :style="{ backgroundColor: selectedAccountBankColor }"
+                        >
+                          {{ selectedAccountBankCode }}
+                        </span>
+                        <span class="text-xs font-bold text-on-surface truncate">{{ selectedAccount.name }}</span>
+                        <span class="text-[10px] text-on-surface-variant font-semibold">({{ settingsStore.formatValueRaw(selectedAccount.balance) }})</span>
+                      </template>
+                      <span v-else class="text-xs font-semibold text-on-surface-variant">Select Account</span>
+                    </div>
+                    <ChevronDown class="w-4 h-4 text-on-surface-variant transition-transform duration-250 flex-shrink-0" :class="{ 'rotate-180 text-primary': accountDropdownOpen }" />
+                  </button>
+                </div>
+
+                <!-- Custom Dropdown Popup (Teleported to body) -->
+                <Teleport to="body">
+                  <transition name="expand">
+                    <div
+                      v-if="accountDropdownOpen"
+                      ref="dropdownMenuRef"
+                      :style="dropdownStyle"
+                      class="border border-[#464554]/30 rounded-xl bg-[#171721] shadow-2xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-[#464554]/15"
+                    >
+                      <div v-for="group in groupedAccounts" :key="group.bank.id" class="p-1.5">
+                        <!-- Group Header with Bank Badge and Name -->
+                        <div class="flex items-center gap-2 px-2.5 py-1 text-[9px] font-black uppercase text-on-surface-variant tracking-wider bg-[#13131b]/35 rounded-lg select-none">
+                          <span
+                            class="px-1.5 py-0.5 rounded text-[8px] font-bold text-white shadow-sm"
+                            :style="{ backgroundColor: group.bank.color }"
+                          >
+                            {{ group.bank.code }}
+                          </span>
+                          <span>{{ group.bank.name }}</span>
+                        </div>
+
+                        <!-- Group Accounts list -->
+                        <div class="mt-1 space-y-0.5">
+                          <div
+                            v-for="acc in group.accounts"
+                            :key="acc.id"
+                            @click="selectAccount(acc.id)"
+                            class="flex items-center justify-between px-2.5 py-2 rounded-lg hover:bg-primary/10 cursor-pointer transition-colors group/item"
+                            :class="[form.accountId === acc.id ? 'bg-primary/5 text-primary' : 'text-on-surface']"
+                          >
+                            <span class="text-xs font-bold group-hover/item:text-primary transition-colors truncate">{{ acc.name }}</span>
+                            <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+                              <span class="text-[10px] font-extrabold text-on-surface-variant">{{ settingsStore.formatValueRaw(acc.balance) }}</span>
+                              <Check v-if="form.accountId === acc.id" class="w-3.5 h-3.5 text-primary" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </transition>
+                </Teleport>
               </div>
             </div>
 
@@ -205,15 +271,17 @@
     <template #footer>
       <button
         @click="close"
-        class="px-4 py-2 rounded-xl bg-surface-container hover:bg-surface-bright text-xs font-bold text-on-surface transition-all border border-[#464554]/40 cursor-pointer"
+        :disabled="isSaving"
+        class="px-4 py-2 rounded-xl bg-surface-container hover:bg-surface-bright text-xs font-bold text-on-surface transition-all border border-[#464554]/40 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Cancel
       </button>
       <button
         @click="save"
-        class="px-4 py-2 rounded-xl bg-primary text-xs font-bold text-on-primary hover:bg-primary/90 transition-all cursor-pointer shadow-[0_0_15px_rgba(99,102,241,0.4)]"
+        :disabled="isSaving"
+        class="px-4 py-2 rounded-xl bg-primary text-xs font-bold text-on-primary hover:bg-primary/90 transition-all cursor-pointer shadow-[0_0_15px_rgba(99,102,241,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Save Transaction
+        {{ isSaving ? 'Saving...' : 'Save Transaction' }}
       </button>
     </template>
   </CommonModal>
@@ -222,8 +290,8 @@
 <script setup>
 import { useBudgetStore } from '~/stores/budget'
 import { useSettingsStore } from '~/stores/settings'
-import { ref, computed, watch } from 'vue'
-import { Calendar, Tag, Folder, CreditCard } from '@lucide/vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { Calendar, Tag, Folder, CreditCard, ChevronDown, Check } from '@lucide/vue'
 
 const props = defineProps({
   show: {
@@ -251,6 +319,124 @@ const form = ref({
 
 const formAmount = ref('')
 const formType = ref('outflow')
+
+const isSaving = ref(false)
+const accountDropdownOpen = ref(false)
+const dropdownContainer = ref(null)
+const buttonRef = ref(null)
+const dropdownMenuRef = ref(null)
+const dropdownStyle = ref({
+  position: 'absolute',
+  top: '0px',
+  left: '0px',
+  width: '0px',
+  zIndex: '3000'
+})
+
+const updateDropdownPosition = () => {
+  if (buttonRef.value) {
+    const rect = buttonRef.value.getBoundingClientRect()
+    dropdownStyle.value = {
+      position: 'absolute',
+      top: `${rect.bottom + window.scrollY}px`,
+      left: `${rect.left + window.scrollX}px`,
+      width: `${rect.width}px`,
+      zIndex: '3000'
+    }
+  }
+}
+
+watch(accountDropdownOpen, (isOpen) => {
+  if (isOpen) {
+    nextTick(() => {
+      updateDropdownPosition()
+    })
+    window.addEventListener('resize', updateDropdownPosition)
+    window.addEventListener('scroll', updateDropdownPosition, true)
+  } else {
+    window.removeEventListener('resize', updateDropdownPosition)
+    window.removeEventListener('scroll', updateDropdownPosition, true)
+  }
+})
+
+const toggleAccountDropdown = () => {
+  accountDropdownOpen.value = !accountDropdownOpen.value
+}
+
+const selectAccount = (accId) => {
+  form.value.accountId = accId
+  accountDropdownOpen.value = false
+}
+
+const selectedAccount = computed(() => {
+  return store.accounts.find(a => a.id === form.value.accountId)
+})
+
+const selectedAccountBankColor = computed(() => {
+  if (!selectedAccount.value) return '#908fa0'
+  const bank = store.banks.find(b => b.id === selectedAccount.value.bankId)
+  return bank ? bank.color : '#908fa0'
+})
+
+const selectedAccountBankCode = computed(() => {
+  if (!selectedAccount.value) return ''
+  const bank = store.banks.find(b => b.id === selectedAccount.value.bankId)
+  return bank ? bank.code : ''
+})
+
+const groupedAccounts = computed(() => {
+  const list = availableAccounts.value
+  const groupsMap = {}
+  
+  list.forEach(acc => {
+    const bank = store.banks.find(b => b.id === acc.bankId)
+    const bankId = bank ? bank.id : 'unknown'
+    if (!groupsMap[bankId]) {
+      groupsMap[bankId] = {
+        bank: bank || { id: 'unknown', name: 'Other', code: 'OTHER', color: '#6b7280' },
+        accounts: []
+      }
+    }
+    groupsMap[bankId].accounts.push(acc)
+  })
+  
+  const sortedGroups = []
+  store.banks.forEach(bank => {
+    if (groupsMap[bank.id]) {
+      sortedGroups.push(groupsMap[bank.id])
+    }
+  })
+  
+  if (groupsMap['unknown']) {
+    sortedGroups.push(groupsMap['unknown'])
+  }
+  
+  return sortedGroups
+})
+
+const handleOutsideClick = (event) => {
+  if (accountDropdownOpen.value) {
+    const clickedInsideButton = dropdownContainer.value && dropdownContainer.value.contains(event.target)
+    const clickedInsideMenu = dropdownMenuRef.value && dropdownMenuRef.value.contains(event.target)
+    if (!clickedInsideButton && !clickedInsideMenu) {
+      accountDropdownOpen.value = false
+    }
+  }
+}
+
+onMounted(() => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('click', handleOutsideClick)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('click', handleOutsideClick)
+    window.removeEventListener('resize', updateDropdownPosition)
+    window.removeEventListener('scroll', updateDropdownPosition, true)
+  }
+})
 
 const handleFormAmountInput = (event) => {
   const inputVal = event.target.value
@@ -286,7 +472,23 @@ const actualAmountFormatted = computed(() => {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(absoluteAmount)
 })
 
-// Filter categories
+// Filter accounts & categories
+const availableAccounts = computed(() => {
+  const activeAccs = store.accounts.filter(a => a.active !== false)
+  if (props.transaction) {
+    const txAcc = store.accounts.find(a => a.id === props.transaction.accountId)
+    if (txAcc && txAcc.active === false && !activeAccs.some(a => a.id === txAcc.id)) {
+      activeAccs.push(txAcc)
+    }
+  }
+  return activeAccs
+})
+
+const getBankCode = (bankId) => {
+  const bank = store.banks.find(b => b.id === bankId)
+  return bank ? bank.code : ''
+}
+
 const incomeCategories = computed(() => store.categories.filter(c => c.parentId === 'income'))
 const expenseCategories = computed(() => store.categories.filter(c => c.parentId === 'expenses'))
 const savingsCategories = computed(() => store.categories.filter(c => c.parentId === 'savings'))
@@ -305,6 +507,8 @@ const setTxType = (type) => {
 
 // Watch modal trigger
 watch(() => props.show, (newShow) => {
+  accountDropdownOpen.value = false
+  isSaving.value = false
   if (newShow) {
     if (props.transaction) {
       // Edit mode
@@ -334,26 +538,47 @@ const close = () => {
   emit('close')
 }
 
-const save = () => {
+const save = async () => {
+  if (isSaving.value) return
   if (!form.value.description.trim() || !formAmount.value) {
     alert('Please enter all required fields.')
     return
   }
 
-  const cleanAmount = String(formAmount.value).replace(/\./g, '')
-  const amtNum = parseFloat(cleanAmount) || 0
-  const absoluteAmount = settingsStore.kMode ? amtNum * 1000 : rawAmt => amtNum // Wait, settingsStore.kMode ? amtNum * 1000 : amtNum
-  const absAmt = settingsStore.kMode ? amtNum * 1000 : amtNum
-  
-  // Expenses are stored as negative, inflows as positive
-  form.value.amount = formType.value === 'outflow' ? -absAmt : absAmt
+  isSaving.value = true
+  try {
+    const cleanAmount = String(formAmount.value).replace(/\./g, '')
+    const amtNum = parseFloat(cleanAmount) || 0
+    const absAmt = settingsStore.kMode ? amtNum * 1000 : amtNum
+    
+    // Expenses are stored as negative, inflows as positive
+    form.value.amount = formType.value === 'outflow' ? -absAmt : absAmt
 
-  if (props.transaction) {
-    store.editTransaction(form.value)
-  } else {
-    store.addTransaction(form.value)
+    if (props.transaction) {
+      await store.editTransaction(form.value)
+    } else {
+      await store.addTransaction(form.value)
+    }
+
+    close()
+  } catch (error) {
+    console.error(error)
+  } finally {
+    isSaving.value = false
   }
-
-  close()
 }
 </script>
+
+<style scoped>
+.expand-enter-active,
+.expand-leave-active {
+  transition: max-height 0.25s ease-in-out, opacity 0.2s ease-in-out;
+  max-height: 280px;
+  overflow: hidden;
+}
+.expand-enter-from,
+.expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+</style>

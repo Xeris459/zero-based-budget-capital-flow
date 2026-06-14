@@ -17,6 +17,8 @@ use tauri_plugin_decorum::WebviewWindowExt;
 pub fn run() {
   tauri::Builder::default()
     .plugin(tauri_plugin_decorum::init())
+    .plugin(tauri_plugin_dialog::init())
+    .plugin(tauri_plugin_fs::init())
     .manage(DbState::new())
     .setup(|app| {
       if cfg!(debug_assertions) {
@@ -49,6 +51,7 @@ pub fn run() {
       commands::db::accounts::db_update_account,
       commands::db::accounts::db_delete_account,
       commands::db::categories::db_add_category,
+      commands::db::categories::db_update_category,
       commands::db::categories::db_delete_category,
       commands::db::budgets::db_set_budget_planned,
       commands::db::budgets::db_reset_current_plan,
@@ -57,6 +60,7 @@ pub fn run() {
       commands::db::transactions::db_delete_transaction,
       commands::db::initial::db_save_config,
       commands::db::reset::db_reset_all_data,
+      commands::db::import::db_import_all_data,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

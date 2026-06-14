@@ -196,6 +196,43 @@
                 </button>
               </div>
             </div>
+
+            <!-- Foreign Currency Toggle -->
+            <div 
+              @click="isValas = !isValas"
+              class="p-3 bg-[#13131b]/60 border border-[#464554]/25 rounded-xl flex items-center justify-between cursor-pointer select-none"
+            >
+              <div class="flex flex-col gap-0.5">
+                <span class="text-[10px] font-bold text-on-surface">Rekening Valas (Mata Uang Asing)?</span>
+                <span class="text-[9px] text-on-surface-variant">Aktifkan jika rekening ini menggunakan mata uang asing (USD, SGD, dll.)</span>
+              </div>
+              <button
+                type="button"
+                class="w-11 h-6 rounded-full relative transition-colors focus:outline-none pointer-events-none"
+                :class="[isValas ? 'bg-primary' : 'bg-surface-variant']"
+              >
+                <span
+                  class="absolute top-1 w-4 h-4 bg-background rounded-full transition-all duration-200"
+                  :class="[isValas ? 'right-1' : 'left-1']"
+                ></span>
+              </button>
+            </div>
+
+            <!-- Valas Instruction Card -->
+            <div v-if="isValas" class="p-3 bg-primary/5 border border-primary/20 rounded-xl space-y-2 text-[10px] text-on-surface-variant leading-relaxed animate-fade-in select-none">
+              <div class="flex items-center gap-1.5 text-primary font-bold">
+                <HelpCircle class="w-3.5 h-3.5" />
+                <span>Panduan Rekening Valas (Cara 1)</span>
+              </div>
+              <p>
+                Untuk menjaga keakuratan anggaran <em>Zero-Based Budgeting</em>, rekening ini harus tetap dicatat dalam ekuivalen <strong>Rupiah (IDR)</strong>:
+              </p>
+              <ul class="list-disc pl-4 space-y-1">
+                <li><strong>Saldo Awal</strong>: Konversikan saldo valas Anda saat ini ke Rupiah menggunakan kurs hari ini (misal: USD 1,000 &rarr; masukkan Rp 16.300.000).</li>
+                <li><strong>Konversi/Jual Beli</strong>: Catat penukaran uang sebagai transaksi <strong>Transfer</strong> antar rekening dengan nilai Rupiah aktual.</li>
+                <li><strong>Penyesuaian Kurs</strong>: Lakukan penyesuaian bulanan. Jika nilai Rupiah menguat, buat transaksi <em>Inflow</em> kategori khusus "Selisih Kurs". Jika melemah, buat transaksi <em>Outflow</em> "Selisih Kurs".</li>
+              </ul>
+            </div>
           </div>
         </div>
       </form>
@@ -203,15 +240,17 @@
     <template #footer>
       <button
         @click="close"
-        class="px-4 py-2 rounded-xl bg-surface-container hover:bg-surface-bright text-xs font-bold text-on-surface transition-all border border-[#464554]/40 cursor-pointer"
+        :disabled="isSaving"
+        class="px-4 py-2 rounded-xl bg-surface-container hover:bg-surface-bright text-xs font-bold text-on-surface transition-all border border-[#464554]/40 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Cancel
       </button>
       <button
         @click="saveNewAccount"
-        class="px-4 py-2 rounded-xl bg-primary text-xs font-bold text-on-primary hover:bg-primary/90 transition-all cursor-pointer shadow-[0_0_15px_rgba(99,102,241,0.4)]"
+        :disabled="isSaving"
+        class="px-4 py-2 rounded-xl bg-primary text-xs font-bold text-on-primary hover:bg-primary/90 transition-all cursor-pointer shadow-[0_0_15px_rgba(99,102,241,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Create Account
+        {{ isSaving ? 'Creating...' : 'Create Account' }}
       </button>
     </template>
   </CommonModal>
@@ -221,7 +260,7 @@
 import { ref, watch, computed } from 'vue'
 import { useBudgetStore } from '~/stores/budget'
 import { useSettingsStore } from '~/stores/settings'
-import { Landmark, Lock, CreditCard, Wallet, PenLine } from '@lucide/vue'
+import { Landmark, Lock, CreditCard, Wallet, PenLine, HelpCircle } from '@lucide/vue'
 
 const props = defineProps({
   show: {
@@ -247,6 +286,8 @@ const newAccount = ref({
 })
 
 const displayStartingBalance = ref('0')
+const isValas = ref(false)
+const isSaving = ref(false)
 
 const handleStartingBalanceInput = (event) => {
   const inputVal = event.target.value
@@ -297,6 +338,7 @@ const actualBalanceFormatted = computed(() => {
 })
 
 watch(() => props.show, (newShow) => {
+  isSaving.value = false
   if (newShow) {
     newAccount.value = {
       name: '',
@@ -305,6 +347,7 @@ watch(() => props.show, (newShow) => {
       startingBalance: 0
     }
     displayStartingBalance.value = '0'
+    isValas.value = false
   }
 })
 
@@ -312,24 +355,32 @@ const close = () => {
   emit('close')
 }
 
-const saveNewAccount = () => {
+const saveNewAccount = async () => {
+  if (isSaving.value) return
   if (!newAccount.value.name.trim()) {
     alert('Please enter an account name.')
     return
   }
 
-  const rawBal = parseFloat(newAccount.value.startingBalance) || 0
-  const absoluteBalance = settingsStore.kMode ? rawBal * 1000 : rawBal
+  isSaving.value = true
+  try {
+    const rawBal = parseFloat(newAccount.value.startingBalance) || 0
+    const absoluteBalance = settingsStore.kMode ? rawBal * 1000 : rawBal
 
-  const id = 'acc-' + Math.random().toString(36).substring(2, 9)
-  store.addAccount({
-    id,
-    name: newAccount.value.name.trim(),
-    type: newAccount.value.type,
-    bankId: newAccount.value.bankId,
-    startingBalance: absoluteBalance
-  })
+    const id = 'acc-' + Math.random().toString(36).substring(2, 9)
+    await store.addAccount({
+      id,
+      name: newAccount.value.name.trim(),
+      type: newAccount.value.type,
+      bankId: newAccount.value.bankId,
+      startingBalance: absoluteBalance
+    })
 
-  close()
+    close()
+  } catch (error) {
+    console.error(error)
+  } finally {
+    isSaving.value = false
+  }
 }
 </script>

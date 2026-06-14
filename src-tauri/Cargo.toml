@@ -8,6 +8,12 @@ repository = ""
 edition = "2021"
 rust-version = "1.77.2"
 
+[features]
+# When enabled (--features seed), seeds the database with demo data on first launch.
+# Production builds should NOT use this flag — database starts empty by default.
+default = []
+seed = []
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
@@ -42,3 +48,5 @@ windows = { version = "0.58", features = [
 ] }
 keyring = "2.1.6"
 hex = "0.4"
+tauri-plugin-dialog = "2.7.1"
+tauri-plugin-fs = "2.5.1"

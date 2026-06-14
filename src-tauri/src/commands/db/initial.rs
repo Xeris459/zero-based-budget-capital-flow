@@ -40,8 +40,9 @@ pub fn db_get_initial_data(state: tauri::State<'_, DbState>) -> Result<InitialDa
     })?.collect::<Result<Vec<_>, _>>()?;
 
     // 3. Fetch Accounts
-    let mut stmt = conn.prepare("SELECT id, name, type, bank_id, starting_balance, balance FROM accounts")?;
+    let mut stmt = conn.prepare("SELECT id, name, type, bank_id, starting_balance, balance, active FROM accounts")?;
     let accounts = stmt.query_map([], |row| {
+        let active_val: i32 = row.get(6).unwrap_or(1);
         Ok(Account {
             id: row.get(0)?,
             name: row.get(1)?,
@@ -49,6 +50,7 @@ pub fn db_get_initial_data(state: tauri::State<'_, DbState>) -> Result<InitialDa
             bank_id: row.get(3)?,
             starting_balance: row.get(4)?,
             balance: row.get(5)?,
+            active: Some(active_val != 0),
         })
     })?.collect::<Result<Vec<_>, _>>()?;
 

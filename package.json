@@ -13,7 +13,9 @@
     "test:coverage": "vitest run --coverage",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:dev:seed": "tauri dev -- --features seed",
+    "tauri:build": "tauri build",
+    "tauri:build:seed": "tauri build -- --features seed"
   },
   "dependencies": {
     "@fontsource/plus-jakarta-sans": "^5.2.8",
@@ -21,6 +23,8 @@
     "@nuxtjs/tailwindcss": "^6.14.0",
     "@pinia/nuxt": "^0.11.3",
     "@tauri-apps/api": "^2.11.0",
+    "@tauri-apps/plugin-dialog": "^2.7.1",
+    "@tauri-apps/plugin-fs": "^2.5.1",
     "chart.js": "^4.5.1",
     "nuxt": "^4.4.8",
     "vue": "^3.5.35",

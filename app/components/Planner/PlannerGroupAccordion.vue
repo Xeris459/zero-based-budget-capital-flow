@@ -367,13 +367,12 @@ const startEditCategory = (id, name) => {
   editingCatName.value = name
 }
 
-const saveCategoryName = (id) => {
-  if (!editingCatName.value.trim()) return
-  const cat = store.categories.find(c => c.id === id)
-  if (cat) {
-    cat.name = editingCatName.value.trim()
-    store.saveState()
+const saveCategoryName = async (id) => {
+  if (!editingCatName.value.trim()) {
+    editingCatId.value = null
+    return
   }
+  await store.updateCategory(id, editingCatName.value.trim())
   editingCatId.value = null
 }
 

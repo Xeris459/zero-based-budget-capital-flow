@@ -573,10 +573,12 @@
               </div>
               <button
                 @click="exportBackup"
-                class="px-4 py-2.5 rounded-lg bg-primary hover:bg-primary/95 text-xs font-bold text-on-primary transition-all flex items-center gap-2 shadow-lg"
+                :disabled="isExporting"
+                class="px-4 py-2.5 rounded-lg bg-primary hover:bg-primary/95 text-xs font-bold text-on-primary transition-all flex items-center gap-2 shadow-lg disabled:opacity-55 disabled:cursor-not-allowed"
               >
-                <Download class="w-4 h-4" />
-                Export JSON
+                <RefreshCw v-if="isExporting" class="w-4 h-4 animate-spin" />
+                <Download v-else class="w-4 h-4" />
+                {{ isExporting ? 'Exporting...' : 'Export JSON' }}
               </button>
             </div>
 
@@ -589,10 +591,12 @@
                 </div>
                 <button
                   @click="triggerFileInput"
-                  class="px-4 py-2.5 rounded-lg bg-surface-container hover:bg-surface-bright text-xs font-bold text-on-surface border border-[#464554]/40 transition-all flex items-center gap-2"
+                  :disabled="isImporting"
+                  class="px-4 py-2.5 rounded-lg bg-surface-container hover:bg-surface-bright text-xs font-bold text-on-surface border border-[#464554]/40 transition-all flex items-center gap-2 disabled:opacity-55 disabled:cursor-not-allowed"
                 >
-                  <Upload class="w-4 h-4" />
-                  Select File
+                  <RefreshCw v-if="isImporting" class="w-4 h-4 animate-spin" />
+                  <Upload v-else class="w-4 h-4" />
+                  {{ isImporting ? 'Importing...' : 'Select File' }}
                 </button>
                 <input
                   type="file"
@@ -630,10 +634,11 @@
 
             <button
               @click="resetDatabase"
-              class="w-full py-3 rounded-lg bg-error/10 hover:bg-error text-xs font-extrabold text-error hover:text-on-primary border border-error/30 transition-all flex items-center justify-center gap-2 mt-8 shadow-sm"
+              :disabled="isResetting"
+              class="w-full py-3 rounded-lg bg-error/10 hover:bg-error text-xs font-extrabold text-error hover:text-on-primary border border-error/30 transition-all flex items-center justify-center gap-2 mt-8 shadow-sm disabled:opacity-55 disabled:cursor-not-allowed"
             >
-              <RefreshCw class="w-4 h-4" />
-              Reset System Database
+              <RefreshCw class="w-4 h-4" :class="{ 'animate-spin': isResetting }" />
+              {{ isResetting ? 'Resetting Database...' : 'Reset System Database' }}
             </button>
           </div>
         </div>
@@ -828,6 +833,43 @@
         </div>
       </template>
     </CommonModal>
+
+    <!-- Toast Notification -->
+    <Transition name="toast">
+      <div
+        v-if="toast.show"
+        class="fixed bottom-6 right-6 z-[9999] flex items-start gap-3 px-4 py-3.5 rounded-xl shadow-2xl border backdrop-blur-md max-w-sm w-full"
+        :class="{
+          'bg-[#1a2a1a]/90 border-[#4edea3]/30 text-[#4edea3]': toast.type === 'success',
+          'bg-[#2a1a1a]/90 border-[#ff4444]/30 text-[#ff8080]': toast.type === 'error',
+          'bg-[#2a2a1a]/90 border-[#ffb95f]/30 text-[#ffb95f]': toast.type === 'warning',
+        }"
+      >
+        <!-- Icon -->
+        <div class="mt-0.5 shrink-0">
+          <svg v-if="toast.type === 'success'" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <svg v-else-if="toast.type === 'error'" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+          </svg>
+          <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/>
+          </svg>
+        </div>
+        <!-- Content -->
+        <div class="flex-1 min-w-0">
+          <p class="text-xs font-bold tracking-wide">{{ toast.title }}</p>
+          <p class="text-[11px] mt-0.5 opacity-80 break-all leading-relaxed">{{ toast.message }}</p>
+        </div>
+        <!-- Close -->
+        <button @click="toast.show = false" class="shrink-0 opacity-60 hover:opacity-100 transition-opacity mt-0.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -842,6 +884,18 @@ const store = useBudgetStore()
 const settingsStore = useSettingsStore()
 const securityStore = useSecurityStore()
 const activeTab = ref('preferences')
+
+// ----------------------------------------------------
+// Toast notification system
+// ----------------------------------------------------
+const toast = ref({ show: false, type: 'success', title: '', message: '' })
+let toastTimer = null
+
+const showToast = (type, title, message, duration = 4000) => {
+  if (toastTimer) clearTimeout(toastTimer)
+  toast.value = { show: true, type, title, message }
+  toastTimer = setTimeout(() => { toast.value.show = false }, duration)
+}
 
 async function safeInvoke(cmd, args) {
   if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
@@ -1218,32 +1272,70 @@ const vFocus = {
 // ----------------------------------------------------
 // 4. Tab Backup & Recovery
 // ----------------------------------------------------
-const exportBackup = () => {
-  const payload = {
-    banks: store.banks,
-    accounts: store.accounts,
-    categories: store.categories,
-    budgets: store.budgets,
-    transactions: store.transactions,
-    kMode: settingsStore.kMode,
-    currentMonth: settingsStore.currentMonth,
-    currentYear: settingsStore.currentYear,
-    currencySymbol: settingsStore.currencySymbol,
-    warningThreshold: settingsStore.warningThreshold,
-    glowEffects: settingsStore.glowEffects,
-    maxDebtLimit: settingsStore.maxDebtLimit,
-    minSavingsRate: settingsStore.minSavingsRate,
-    lowCashThreshold: settingsStore.lowCashThreshold,
-    security: securityStore.security
-  }
+const isExporting = ref(false)
+const isImporting = ref(false)
+const isResetting = ref(false)
 
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `capital_flow_backup_${new Date().toISOString().split('T')[0]}.json`
-  a.click()
-  URL.revokeObjectURL(url)
+const exportBackup = async () => {
+  isExporting.value = true
+  try {
+    // Artificial small delay to allow loading spinner to render
+    await new Promise((resolve) => setTimeout(resolve, 400))
+    
+    const payload = {
+      banks: store.banks,
+      accounts: store.accounts,
+      categories: store.categories,
+      budgets: store.budgets,
+      transactions: store.transactions,
+      kMode: settingsStore.kMode,
+      currentMonth: settingsStore.currentMonth,
+      currentYear: settingsStore.currentYear,
+      currencySymbol: settingsStore.currencySymbol,
+      warningThreshold: settingsStore.warningThreshold,
+      glowEffects: settingsStore.glowEffects,
+      maxDebtLimit: settingsStore.maxDebtLimit,
+      minSavingsRate: settingsStore.minSavingsRate,
+      lowCashThreshold: settingsStore.lowCashThreshold,
+      security: securityStore.security
+    }
+
+    const jsonContent = JSON.stringify(payload, null, 2)
+    const defaultFileName = `capital_flow_backup_${new Date().toISOString().split('T')[0]}.json`
+
+    // In Tauri: show native save dialog
+    if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+      const { save } = await import('@tauri-apps/plugin-dialog')
+      const { writeTextFile } = await import('@tauri-apps/plugin-fs')
+
+      const filePath = await save({
+        title: 'Save Capital Flow Backup',
+        defaultPath: defaultFileName,
+        filters: [{ name: 'JSON Backup', extensions: ['json'] }]
+      })
+
+      if (!filePath) return // User cancelled the dialog
+
+      await writeTextFile(filePath, jsonContent)
+      showToast('success', 'Backup Exported', `File saved to: ${filePath}`)
+      return
+    }
+
+    // Browser fallback: trigger native download
+    const blob = new Blob([jsonContent], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = defaultFileName
+    a.click()
+    URL.revokeObjectURL(url)
+    showToast('success', 'Backup Downloaded', `File "${defaultFileName}" has been downloaded.`)
+  } catch (err) {
+    console.error('Export failed:', err)
+    showToast('error', 'Export Failed', err?.message || 'Could not save the backup file.')
+  } finally {
+    isExporting.value = false
+  }
 }
 
 const fileInput = ref(null)
@@ -1258,31 +1350,70 @@ const handleFileImport = (event) => {
   const file = event.target.files[0]
   if (!file) return
 
+  isImporting.value = true
   const reader = new FileReader()
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
+      // Small delay to allow visual spinner to render
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      
       const parsed = JSON.parse(e.target.result)
-      const res = store.importState(parsed)
+      const res = await store.importState(parsed)
       if (res.success) {
-        importSuccess.value = true
+        showToast('success', 'Backup Imported', 'All data has been restored from the backup file.')
         importError.value = ''
-        setTimeout(() => {
-          importSuccess.value = false
-        }, 3000)
       } else {
         importError.value = res.error
+        showToast('error', 'Import Failed', res.error)
       }
     } catch (err) {
       importError.value = 'Failed to parse JSON backup file structure.'
+      showToast('error', 'Import Failed', 'Invalid JSON backup file.')
+    } finally {
+      isImporting.value = false
+      event.target.value = ''
     }
+  }
+  reader.onerror = () => {
+    showToast('error', 'Import Failed', 'Failed to read backup file.')
+    isImporting.value = false
+    event.target.value = ''
   }
   reader.readAsText(file)
 }
 
-const resetDatabase = () => {
+const resetDatabase = async () => {
   if (confirm('Are you absolutely sure you want to restore the Capital Flow system to factory defaults? All custom banks, transactions, and categories will be deleted!')) {
-    store.resetDatabase()
-    alert('System database has been reset successfully.')
+    isResetting.value = true
+    try {
+      // Small delay to show visual feedback
+      await new Promise((resolve) => setTimeout(resolve, 600))
+      await store.resetDatabase()
+      showToast('success', 'Database Reset', 'All data has been cleared. The app is now in a clean state.')
+    } catch (err) {
+      console.error('Reset failed:', err)
+      showToast('error', 'Reset Failed', err?.message || 'Could not reset the database.')
+    } finally {
+      isResetting.value = false
+    }
   }
 }
 </script>
+
+<style scoped>
+/* Toast Transition */
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-enter-from {
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+}
+
+.toast-leave-to {
+  opacity: 0;
+  transform: translateY(10px) scale(0.98);
+}
+</style>

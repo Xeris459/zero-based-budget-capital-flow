@@ -19,6 +19,7 @@ pub struct Account {
     #[serde(rename = "startingBalance")]
     pub starting_balance: f64,
     pub balance: f64,
+    pub active: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

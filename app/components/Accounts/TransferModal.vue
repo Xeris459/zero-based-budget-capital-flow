@@ -229,15 +229,17 @@
     <template #footer>
       <button
         @click="close"
-        class="px-4 py-2 rounded-xl bg-surface-container hover:bg-surface-bright text-xs font-bold text-on-surface transition-all border border-[#464554]/40 cursor-pointer"
+        :disabled="isSaving"
+        class="px-4 py-2 rounded-xl bg-surface-container hover:bg-surface-bright text-xs font-bold text-on-surface transition-all border border-[#464554]/40 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Cancel
       </button>
       <button
         @click="executeTransfer"
-        class="px-4 py-2 rounded-xl bg-primary text-xs font-bold text-on-primary hover:bg-primary/90 transition-all cursor-pointer shadow-[0_0_15px_rgba(99,102,241,0.4)]"
+        :disabled="isSaving"
+        class="px-4 py-2 rounded-xl bg-primary text-xs font-bold text-on-primary hover:bg-primary/90 transition-all cursor-pointer shadow-[0_0_15px_rgba(99,102,241,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Confirm Transfer
+        {{ isSaving ? 'Transferring...' : 'Confirm Transfer' }}
       </button>
     </template>
   </CommonModal>
@@ -287,6 +289,7 @@ const transferForm = ref({
 const displayAmount = ref('0')
 const sourceDropdownOpen = ref(false)
 const destDropdownOpen = ref(false)
+const isSaving = ref(false)
 
 const memoSuggestions = [
   'Refill Pocket Cash',
@@ -385,20 +388,35 @@ const actualAmountFormatted = computed(() => {
 })
 
 const filteredSourceAccounts = computed(() => {
+  let list = store.accounts.filter(acc => acc.active !== false)
   if (props.sourceBankId) {
-    return store.accounts.filter(acc => acc.bankId === props.sourceBankId)
+    list = list.filter(acc => acc.bankId === props.sourceBankId)
   }
-  return store.accounts
+  if (props.initialFromAccountId) {
+    const acc = store.accounts.find(a => a.id === props.initialFromAccountId)
+    if (acc && !list.some(a => a.id === acc.id)) {
+      list.push(acc)
+    }
+  }
+  return list
 })
 
 const filteredDestAccounts = computed(() => {
+  let list = store.accounts.filter(acc => acc.active !== false)
   if (props.destBankId) {
-    return store.accounts.filter(acc => acc.bankId === props.destBankId)
+    list = list.filter(acc => acc.bankId === props.destBankId)
   }
-  return store.accounts
+  if (props.initialToAccountId) {
+    const acc = store.accounts.find(a => a.id === props.initialToAccountId)
+    if (acc && !list.some(a => a.id === acc.id)) {
+      list.push(acc)
+    }
+  }
+  return list
 })
 
 watch(() => props.show, (newShow) => {
+  isSaving.value = false
   if (newShow) {
     sourceDropdownOpen.value = false
     destDropdownOpen.value = false
@@ -426,7 +444,8 @@ const close = () => {
   emit('close')
 }
 
-const executeTransfer = () => {
+const executeTransfer = async () => {
+  if (isSaving.value) return
   if (transferForm.value.fromAccountId === transferForm.value.toAccountId) {
     alert('Source and destination accounts must be different.')
     return
@@ -436,17 +455,24 @@ const executeTransfer = () => {
     return
   }
 
-  const rawAmt = parseFloat(transferForm.value.amount)
-  const absoluteAmount = settingsStore.kMode ? rawAmt * 1000 : rawAmt
+  isSaving.value = true
+  try {
+    const rawAmt = parseFloat(transferForm.value.amount)
+    const absoluteAmount = settingsStore.kMode ? rawAmt * 1000 : rawAmt
 
-  store.transferFunds(
-    transferForm.value.fromAccountId,
-    transferForm.value.toAccountId,
-    absoluteAmount,
-    transferForm.value.memo || 'Transfer Funds'
-  )
+    await store.transferFunds(
+      transferForm.value.fromAccountId,
+      transferForm.value.toAccountId,
+      absoluteAmount,
+      transferForm.value.memo || 'Transfer Funds'
+    )
 
-  close()
+    close()
+  } catch (error) {
+    console.error(error)
+  } finally {
+    isSaving.value = false
+  }
 }
 </script>
 

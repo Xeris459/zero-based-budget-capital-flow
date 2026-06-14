@@ -12,6 +12,7 @@ export interface Account {
   bankId: string
   startingBalance: number
   balance: number
+  active?: boolean
 }
 
 export interface Category {

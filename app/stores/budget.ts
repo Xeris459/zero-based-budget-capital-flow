@@ -327,30 +327,37 @@ export const useBudgetStore = defineStore('budget', {
     // Bank flow lines for money transfers
     activeFlows(): any[] {
       const transfers = this.periodTransactions.filter(t => t.transferId && t.amount < 0)
-      
-      return transfers.map(tx => {
+      const aggregated = {}
+
+      transfers.forEach(tx => {
         const matchTx = this.periodTransactions.find(t => t.transferId === tx.transferId && t.amount > 0)
-        if (!matchTx) return null
+        if (!matchTx) return
 
         const sourceAcc = this.accounts.find(a => a.id === tx.accountId)
         const destAcc = this.accounts.find(a => a.id === matchTx.accountId)
-        if (!sourceAcc || !destAcc) return null
+        if (!sourceAcc || !destAcc) return
 
-        if (sourceAcc.bankId === destAcc.bankId) return null
+        if (sourceAcc.bankId === destAcc.bankId) return
 
         const sourceNode = this.bankNodes.find(n => n.id === sourceAcc.bankId)
         const destNode = this.bankNodes.find(n => n.id === destAcc.bankId)
-        if (!sourceNode || !destNode) return null
+        if (!sourceNode || !destNode) return
 
-        return {
-          id: tx.transferId,
-          fromX: `${sourceNode.x}%`,
-          fromY: `${sourceNode.y}%`,
-          toX: `${destNode.x}%`,
-          toY: `${destNode.y}%`,
-          amount: Math.abs(tx.amount)
+        const key = `${sourceAcc.bankId}->${destAcc.bankId}`
+        if (!aggregated[key]) {
+          aggregated[key] = {
+            id: key,
+            fromX: `${sourceNode.x}%`,
+            fromY: `${sourceNode.y}%`,
+            toX: `${destNode.x}%`,
+            toY: `${destNode.y}%`,
+            amount: 0
+          }
         }
-      }).filter(Boolean)
+        aggregated[key].amount += Math.abs(tx.amount)
+      })
+
+      return Object.values(aggregated)
     },
 
     // Filtered ledger transactions list
@@ -663,15 +670,8 @@ export const useBudgetStore = defineStore('budget', {
     // Recalculate account balances
     recalculateAccountBalances() {
       // Reset to starting balances
-      const startingBalances: Record<string, number> = {
-        'acc-checking': 12500000,
-        'acc-savings': 30000000,
-        'acc-credit': -2700000,
-        'acc-cash': 5400000
-      }
-
       this.accounts.forEach(acc => {
-        acc.balance = startingBalances[acc.id] !== undefined ? startingBalances[acc.id] : acc.startingBalance
+        acc.balance = acc.startingBalance
       })
 
       // Apply all transactions chronologically
@@ -765,10 +765,21 @@ export const useBudgetStore = defineStore('budget', {
 
     // Delete Transaction
     async deleteTransaction(id: string) {
+      const tx = this.transactions.find(t => t.id === id)
+      if (!tx) return
+
       const settingsStore = useSettingsStore()
       const securityStore = useSecurityStore()
+
       if (settingsStore.isTauri && !securityStore.isLocked) {
         try {
+          if (tx.transferId) {
+            // Delete matching transfer transaction in SQLite
+            const matchTx = this.transactions.find(t => t.transferId === tx.transferId && t.id !== tx.id)
+            if (matchTx) {
+              await safeInvoke('db_delete_transaction', { id: matchTx.id })
+            }
+          }
           await safeInvoke('db_delete_transaction', { id })
         } catch (e) {
           console.error('Failed to delete transaction in SQLite:', e)
@@ -776,7 +787,12 @@ export const useBudgetStore = defineStore('budget', {
         }
       }
 
-      this.transactions = this.transactions.filter(t => t.id !== id)
+      if (tx.transferId) {
+        this.transactions = this.transactions.filter(t => t.transferId !== tx.transferId)
+      } else {
+        this.transactions = this.transactions.filter(t => t.id !== id)
+      }
+
       this.recalculateAccountBalances()
       this.saveState()
     },
@@ -786,13 +802,34 @@ export const useBudgetStore = defineStore('budget', {
       const date = new Date().toISOString().split('T')[0]
       const transferId = 'xfer-' + Math.random().toString(36).substring(2, 9)
 
+      // Ensure that 'cat-debt-cc' exists to satisfy SQLite foreign key constraints
+      const categoryExists = this.categories.some(c => c.id === 'cat-debt-cc')
+      if (!categoryExists) {
+        const fallbackCategory = {
+          id: 'cat-debt-cc',
+          name: 'Credit Card Payment / Transfer',
+          parentId: 'debt' as const
+        }
+        const settingsStore = useSettingsStore()
+        const securityStore = useSecurityStore()
+        if (settingsStore.isTauri && !securityStore.isLocked) {
+          try {
+            await safeInvoke('db_add_category', { category: fallbackCategory })
+          } catch (e) {
+            console.error('Failed to create fallback category in SQLite:', e)
+          }
+        }
+        this.categories.push(fallbackCategory)
+        this.saveState()
+      }
+
       // Add debit to source account
       await this.addTransaction({
         date,
         description: `${description} to ${this.accounts.find(a => a.id === toAccountId)?.name}`,
         amount: -amount,
         accountId: fromAccountId,
-        categoryId: 'cat-debt-cc', // Use a default category or empty
+        categoryId: 'cat-debt-cc',
         shiftToNextMonth: false,
         transferId
       })
@@ -943,6 +980,29 @@ export const useBudgetStore = defineStore('budget', {
       this.saveState()
     },
 
+    // Edit custom subcategory name
+    async updateCategory(id: string, name: string) {
+      const settingsStore = useSettingsStore()
+      const securityStore = useSecurityStore()
+      
+      const cat = this.categories.find(c => c.id === id)
+      if (!cat) return
+
+      const updatedCategory = { ...cat, name }
+
+      if (settingsStore.isTauri && !securityStore.isLocked) {
+        try {
+          await safeInvoke('db_update_category', { category: updatedCategory })
+        } catch (e) {
+          console.error('Failed to update category in SQLite:', e)
+          return
+        }
+      }
+
+      cat.name = name
+      this.saveState()
+    },
+
     // Delete custom subcategory
     async deleteCategory(id: string) {
       const settingsStore = useSettingsStore()
@@ -1033,20 +1093,41 @@ export const useBudgetStore = defineStore('budget', {
     },
 
     // Import State
-    importState(importedState: any) {
+    async importState(importedState: any) {
       try {
         if (!importedState || typeof importedState !== 'object') throw new Error('Invalid backup data.')
         if (!Array.isArray(importedState.banks) || !Array.isArray(importedState.accounts) || !Array.isArray(importedState.categories)) {
           throw new Error('Backup file is missing core Capital Flow database arrays.')
         }
 
+        const settingsStore = useSettingsStore()
+        const securityStore = useSecurityStore()
+
+        // Persist all table data to SQLite atomically (must happen before updating in-memory state)
+        if (settingsStore.isTauri && !securityStore.isLocked) {
+          try {
+            await safeInvoke('db_import_all_data', {
+              payload: {
+                banks: importedState.banks,
+                accounts: importedState.accounts,
+                categories: importedState.categories,
+                budgets: importedState.budgets || [],
+                transactions: importedState.transactions || []
+              }
+            })
+          } catch (e) {
+            console.error('Failed to import data to SQLite:', e)
+            throw new Error('Failed to save imported data to database.')
+          }
+        }
+
+        // Update in-memory state
         this.banks = importedState.banks
         this.accounts = importedState.accounts
         this.categories = importedState.categories
         this.budgets = importedState.budgets || []
         this.transactions = importedState.transactions || []
         
-        const settingsStore = useSettingsStore()
         if (importedState.kMode !== undefined) settingsStore.kMode = importedState.kMode
         if (importedState.currencySymbol !== undefined) settingsStore.currencySymbol = importedState.currencySymbol
         if (importedState.warningThreshold !== undefined) settingsStore.warningThreshold = importedState.warningThreshold
@@ -1057,7 +1138,6 @@ export const useBudgetStore = defineStore('budget', {
         if (importedState.minSavingsRate !== undefined) settingsStore.minSavingsRate = importedState.minSavingsRate
         if (importedState.lowCashThreshold !== undefined) settingsStore.lowCashThreshold = importedState.lowCashThreshold
         
-        const securityStore = useSecurityStore()
         if (importedState.security !== undefined) {
           securityStore.security = {
             passwordEnabled: importedState.security.passwordEnabled || false,
@@ -1072,7 +1152,8 @@ export const useBudgetStore = defineStore('budget', {
         }
 
         this.recalculateAccountBalances()
-        this.saveState()
+        // saveState() persists config keys and localStorage
+        await this.saveState()
         return { success: true }
       } catch (e: any) {
         return { success: false, error: e.message || 'Import failed.' }

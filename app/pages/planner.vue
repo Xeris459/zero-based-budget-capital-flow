@@ -3,7 +3,8 @@
     <!-- Sticky Zero-Based Budget Banner for real-time allocation tracking (Monthly View only) -->
     <div
       v-if="plannerView === 'monthly'"
-      class="sticky top-16 z-20 bg-background/95 backdrop-blur-md pt-2 pb-4 -mx-4 px-4 sm:-mx-8 sm:px-8 border-b border-[#464554]/10 mb-6 shadow-md"
+      class="sticky z-20 bg-background/95 backdrop-blur-md pt-2 pb-4 -mx-4 px-4 sm:-mx-8 sm:px-8 border-b border-[#464554]/10 mb-6 shadow-md"
+      :class="[settingsStore.isTauri ? 'top-24' : 'top-16']"
     >
       <DashboardZbbStatusBanner class="!mb-0" />
     </div>
@@ -11,7 +12,8 @@
     <!-- Sticky 12-Month ZBB Status Ribbon for real-time allocation tracking (Yearly View only) -->
     <div
       v-if="plannerView === 'yearly'"
-      class="sticky top-16 z-20 bg-background/95 backdrop-blur-md pt-2 pb-3.5 -mx-4 px-4 sm:-mx-8 sm:px-8 border-b border-[#464554]/10 mb-5 shadow-sm"
+      class="sticky z-20 bg-background/95 backdrop-blur-md pt-2 pb-3.5 -mx-4 px-4 sm:-mx-8 sm:px-8 border-b border-[#464554]/10 mb-5 shadow-sm"
+      :class="[settingsStore.isTauri ? 'top-24' : 'top-16']"
     >
       <div
         ref="zbbScrollRef"
