@@ -142,4 +142,18 @@ describe('TransferModal.vue', () => {
       'Test Visualizer Transfer'
     )
   })
+
+  it('shows error if fields are missing on transfer', async () => {
+    const wrapper = mountModal()
+    await nextTick()
+    
+    // Clear amount
+    const amountInput = wrapper.find('input[type="text"]')
+    await amountInput.setValue('')
+    
+    const confirmBtn = wrapper.findAll('button').find(b => b.text() === 'Confirm Transfer')
+    await confirmBtn!.trigger('click')
+    
+    expect(alertSpy).toHaveBeenCalledWith('Please enter a valid transfer amount.')
+  })
 })

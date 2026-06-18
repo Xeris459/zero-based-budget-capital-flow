@@ -1,0 +1,53 @@
+- [x] Define the audit scope.
+- [x] SAST Recon on `src-tauri/src/auth/crypto.rs`
+  - [ ] Investigate fixed salt for key derivation on line 34.
+- [ ] SAST Recon on `app/app.vue`
+- [ ] SAST Recon on `app/components/Accounts/AddAccountModal.vue`
+- [ ] SAST Recon on `app/components/Accounts/BankFlowVisualizer.vue`
+- [ ] SAST Recon on `app/components/Accounts/LedgerTable.vue`
+- [ ] SAST Recon on `app/components/Accounts/TransferModal.vue`
+- [ ] SAST Recon on `app/components/Common/BottomNav.vue`
+- [ ] SAST Recon on `app/components/Common/LockScreen.vue`
+- [ ] SAST Recon on `app/components/Common/Modal.vue`
+- [ ] SAST Recon on `app/components/Common/Sidebar.vue`
+- [ ] SAST Recon on `app/components/Common/SplashScreen.vue`
+- [ ] SAST Recon on `app/components/Common/Titlebar.vue`
+- [ ] SAST Recon on `app/components/Dashboard/AccountsSummary.vue`
+- [ ] SAST Recon on `app/components/Dashboard/BudgetTrendChart.vue`
+- [ ] SAST Recon on `app/components/Dashboard/DetailModal.vue`
+- [ ] SAST Recon on `app/components/Dashboard/DoughnutChart.vue`
+- [ ] SAST Recon on `app/components/Dashboard/IncomeOverview.vue`
+- [ ] SAST Recon on `app/components/Dashboard/KpiRibbon.vue`
+- [ ] SAST Recon on `app/components/Dashboard/SummaryTable.vue`
+- [ ] SAST Recon on `app/components/Dashboard/ZbbStatusBanner.vue`
+- [ ] SAST Recon on `app/components/Planner/PlannerGroupAccordion.vue`
+- [ ] SAST Recon on `app/components/Planner/PlannerYearlyGrid.vue`
+- [ ] SAST Recon on `app/components/Transactions/TransactionModal.vue`
+- [ ] SAST Recon on `app/pages/accounts.vue`
+- [ ] SAST Recon on `app/pages/index.vue`
+- [ ] SAST Recon on `app/pages/planner.vue`
+- [ ] SAST Recon on `app/pages/settings.vue`
+- [ ] SAST Recon on `app/pages/transactions.vue`
+- [ ] SAST Recon on `app/stores/budget.ts`
+- [ ] SAST Recon on `app/stores/security.ts`
+- [ ] SAST Recon on `app/stores/settings.ts`
+- [ ] SAST Recon on `src-tauri/src/auth/biometrics.rs`
+- [ ] SAST Recon on `src-tauri/src/commands/auth.rs`
+- [ ] SAST Recon on `src-tauri/src/commands/biometrics.rs`
+- [ ] SAST Recon on `src-tauri/src/commands/db/accounts.rs`
+- [ ] SAST Recon on `src-tauri/src/commands/db/banks.rs`
+- [ ] SAST Recon on `src-tauri/src/commands/db/budgets.rs`
+- [ ] SAST Recon on `src-tauri/src/commands/db/categories.rs`
+- [ ] SAST Recon on `src-tauri/src/commands/db/import.rs`
+- [ ] SAST Recon on `src-tauri/src/commands/db/initial.rs`
+- [ ] SAST Recon on `src-tauri/src/commands/db/mod.rs`
+- [ ] SAST Recon on `src-tauri/src/commands/db/reset.rs`
+- [ ] SAST Recon on `src-tauri/src/commands/db/transactions.rs`
+- [ ] SAST Recon on `src-tauri/src/commands/mod.rs`
+- [ ] SAST Recon on `src-tauri/src/db/manager.rs`
+- [ ] SAST Recon on `src-tauri/src/db/models.rs`
+- [ ] SAST Recon on `src-tauri/src/errors.rs`
+- [ ] SAST Recon on `src-tauri/src/lib.rs`
+- [ ] SAST Recon on `src-tauri/src/main.rs`
+- [ ] SAST Recon on `src-tauri/tauri.conf.json`
+- [ ] Conduct the final review of all findings as per your **Minimizing False Positives** operating principle and generate the final report.

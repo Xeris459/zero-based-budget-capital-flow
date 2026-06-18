@@ -24,9 +24,13 @@ describe('Settings Store', () => {
 
   it('formats values in k-mode and human-readable mode', () => {
     expect(settingsStore.formatValue(1000)).toBe('Rp 1K')
-    expect(settingsStore.formatValueRaw(1500)).toBe('1,5K')
+    expect(settingsStore.formatValueRaw(1500)).toBe('1,5')
     expect(settingsStore.formatIndonesianHuman(1500000)).toBe('Rp 1,5 jt')
     expect(settingsStore.formatIndonesianHuman(-1500000)).toBe('-Rp 1,5 jt')
+    expect(settingsStore.formatIndonesianHumanRaw(1500000)).toBe('1,5 jt')
+    expect(settingsStore.formatIndonesianHumanRaw(-1500000)).toBe('-1,5 jt')
+    expect(settingsStore.formatIndonesianHumanRaw(1500000000)).toBe('1,5 M')
+    expect(settingsStore.formatIndonesianHumanRaw(500)).toBe('500')
 
     settingsStore.kMode = false
     expect(settingsStore.formatValue(1500000)).toBe('Rp 1.500.000')

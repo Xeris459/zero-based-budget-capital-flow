@@ -28,16 +28,23 @@ pub fn verify_credential(plain: &str, hashed_hash: &str) -> Result<bool, AppErro
     Ok(is_valid)
 }
 
-// Derives a 32-byte key deterministically from the PIN
-pub fn derive_key(pin: &str) -> Result<[u8; 32], AppError> {
-    // Fixed salt for key derivation
-    let salt = SaltString::from_b64("c2FsdF9mb3JfZGIxMg") // minimum salt length
-        .map_err(|e| AppError::Crypto(e.to_string()))?;
+// Derives a 32-byte key deterministically from the PIN and a salt (hex encoded)
+pub fn derive_key(pin: &str, salt_hex: &str) -> Result<[u8; 32], AppError> {
+    let salt_bytes = hex::decode(salt_hex)
+        .map_err(|e| AppError::Crypto(format!("Invalid salt hex: {}", e)))?;
     let mut key = [0u8; 32];
     Argon2::default()
-        .hash_password_into(pin.as_bytes(), salt.as_str().as_bytes(), &mut key)
+        .hash_password_into(pin.as_bytes(), &salt_bytes, &mut key)
         .map_err(|e| AppError::Crypto(e.to_string()))?;
     Ok(key)
+}
+
+// Generates a new random salt for key derivation
+pub fn generate_salt() -> String {
+    use argon2::password_hash::rand_core::{OsRng, RngCore};
+    let mut salt_bytes = [0u8; 16];
+    OsRng.fill_bytes(&mut salt_bytes);
+    hex::encode(salt_bytes)
 }
 
 // Encrypts plain text using AES-256-GCM
@@ -95,10 +102,11 @@ mod tests {
     fn test_key_derivation() {
         let pin1 = "123456";
         let pin2 = "654321";
+        let salt = "73616c745f666f725f64623132"; // hex encoded salt
         
-        let key1 = derive_key(pin1).expect("Failed to derive key1");
-        let key1_again = derive_key(pin1).expect("Failed to derive key1 again");
-        let key2 = derive_key(pin2).expect("Failed to derive key2");
+        let key1 = derive_key(pin1, salt).expect("Failed to derive key1");
+        let key1_again = derive_key(pin1, salt).expect("Failed to derive key1 again");
+        let key2 = derive_key(pin2, salt).expect("Failed to derive key2");
         
         assert_eq!(key1, key1_again);
         assert_ne!(key1, key2);
@@ -107,7 +115,8 @@ mod tests {
 
     #[test]
     fn test_encryption_decryption_roundtrip() {
-        let key = derive_key("my-secret-pin").expect("Failed to derive key");
+        let salt = "73616c745f666f725f64623132";
+        let key = derive_key("my-secret-pin", salt).expect("Failed to derive key");
         let original_data = "Hello, zero-based budgeting!";
         
         let encrypted = encrypt_data(original_data, &key).expect("Failed to encrypt");
@@ -116,14 +125,15 @@ mod tests {
         assert_eq!(original_data, decrypted);
         
         // Test failure with incorrect key
-        let wrong_key = derive_key("wrong-pin").expect("Failed to derive wrong key");
+        let wrong_key = derive_key("wrong-pin", salt).expect("Failed to derive wrong key");
         let decrypt_fail = decrypt_data(&encrypted, &wrong_key);
         assert!(decrypt_fail.is_err());
     }
 
     #[test]
     fn test_decryption_failures() {
-        let key = derive_key("pin").expect("Failed to derive key");
+        let salt = "73616c745f666f725f64623132";
+        let key = derive_key("pin", salt).expect("Failed to derive key");
         
         // Invalid hex string
         let decrypt_invalid_hex = decrypt_data("not-hex-at-all", &key);

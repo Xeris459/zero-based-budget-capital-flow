@@ -3,6 +3,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
 import { useBudgetStore } from '~/stores/budget'
 import { useSettingsStore } from '~/stores/settings'
@@ -88,6 +89,19 @@ describe('Sidebar.vue', () => {
 
     await toggleBtn!.trigger('click')
     expect(settingsStore.kMode).toBe(false)
-  })
+    })
 
-})
+  it('renders tooltips and hides labels when collapsed', async () => {
+    settingsStore.isSidebarCollapsed = true
+    const wrapper = mountSidebar()
+    await nextTick()
+
+    // Labels should be hidden (v-if="!settingsStore.isSidebarCollapsed")
+    // They are spans with transition-opacity class
+    expect(wrapper.find('span.transition-opacity').exists()).toBe(false)
+
+    // Tooltips should be present
+    expect(wrapper.text()).toContain('Dashboard')
+    expect(wrapper.text()).toContain('Settings')
+  })
+    })

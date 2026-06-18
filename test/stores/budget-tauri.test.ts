@@ -16,11 +16,13 @@ describe('Budget Store - Tauri flows', () => {
   const invokeMock = vi.mocked(invoke)
 
   const enableTauriMode = (enabled: boolean) => {
-    Object.defineProperty(window, '__TAURI_INTERNALS__', {
-      value: enabled,
-      configurable: true,
-      writable: true
-    })
+    if (enabled) {
+      (window as any).__TAURI_INTERNALS__ = { 
+        invoke: invokeMock 
+      }
+    } else {
+      (window as any).__TAURI_INTERNALS__ = undefined
+    }
     settingsStore.isTauri = enabled
   }
 
@@ -30,7 +32,7 @@ describe('Budget Store - Tauri flows', () => {
     settingsStore = useSettingsStore()
     securityStore = useSecurityStore()
     localStorage.clear()
-    invokeMock.mockReset()
+    vi.clearAllMocks()
     enableTauriMode(true)
     securityStore.isLocked = false
     securityStore.security.pinVal = '2468'
@@ -133,5 +135,67 @@ describe('Budget Store - Tauri flows', () => {
     })
 
     expect(budgetStore.transactions.length).toBeGreaterThan(0)
+  })
+
+  it('covers individual actions in Tauri mode', async () => {
+    invokeMock.mockResolvedValue(undefined)
+    
+    // Add category
+    await budgetStore.addCategory('New Cat', 'expenses')
+    const cat = budgetStore.categories.find(c => c.name === 'New Cat')
+    expect(cat).toBeDefined()
+    
+    if (cat) {
+      // Update category
+      await budgetStore.updateCategory(cat.id, 'Updated Cat')
+      // Delete category
+      await budgetStore.deleteCategory(cat.id)
+    }
+    
+    // Add bank
+    await budgetStore.addBank('New Bank', 'NB', '#fff')
+    const bank = budgetStore.banks.find(b => b.name === 'New Bank')
+    expect(bank).toBeDefined()
+    
+    if (bank) {
+      // Delete bank
+      await budgetStore.deleteBank(bank.id)
+    }
+    
+    // Set budget planned
+    await budgetStore.setBudgetPlanned('cat-1', 1000)
+    
+    // Transfer funds
+    await budgetStore.transferFunds('acc-1', 'acc-2', 500, 'T')
+
+    // Add transaction
+    await budgetStore.addTransaction({
+      date: '2026-06-05',
+      description: 'New Tx',
+      amount: -100,
+      accountId: 'acc-1',
+      categoryId: 'cat-1',
+      shiftToNextMonth: false
+    })
+
+    // Delete account
+    await budgetStore.deleteAccount('acc-1')
+
+    // Verify all core DB commands were called at least once
+    const expectedCommands = [
+      'db_add_category', 
+      'db_update_category', 
+      'db_delete_category', 
+      'db_add_bank', 
+      'db_delete_bank', 
+      'db_set_budget_planned', 
+      'db_add_transaction',
+      'db_delete_account'
+    ]
+    
+    expectedCommands.forEach(cmd => {
+      const wasCalled = invokeMock.mock.calls.some(call => call[0] === cmd)
+      expect(wasCalled, `Command ${cmd} should have been called`).toBe(true)
+    })
   })
 })

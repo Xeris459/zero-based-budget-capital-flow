@@ -52,7 +52,7 @@ export const useSettingsStore = defineStore('settings', {
     // Redenomination display helper without prefix
     formatValueRaw(value: number): string {
       if (this.kMode) {
-        return (value / 1000).toLocaleString('id-ID') + 'K'
+        return (value / 1000).toLocaleString('id-ID', { maximumFractionDigits: 2 })
       }
       return value.toLocaleString('id-ID')
     },

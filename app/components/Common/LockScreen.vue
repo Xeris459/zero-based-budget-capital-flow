@@ -27,8 +27,7 @@
       <!-- Loading / Biometric Simulation Overlay -->
       <div v-if="isBiometricSimulating" class="flex-1 flex flex-col items-center justify-center gap-4 py-8 w-full">
         <div
-          class="relative w-20 h-20 flex items-center justify-center cursor-pointer group"
-          @click="simulateBiometricSuccess"
+          class="relative w-20 h-20 flex items-center justify-center group"
         >
           <span v-if="!biometricSuccess" class="absolute inset-0 rounded-full border-2 border-primary/20 animate-ping"></span>
           <span v-if="!biometricSuccess" class="absolute -inset-2 rounded-full border border-primary/10 animate-pulse"></span>
@@ -50,9 +49,6 @@
             :class="[biometricSuccess ? 'text-secondary font-black' : 'text-primary animate-pulse']"
           >
             {{ biometricSuccess ? 'Sidik Jari / Wajah Cocok!' : 'Memindai Biometrik Perangkat...' }}
-          </span>
-          <span v-if="!biometricSuccess" class="text-[9px] text-on-surface-variant font-medium max-w-[280px]">
-            Ketuk ikon sidik jari di atas untuk memverifikasi kecocokan, atau biarkan untuk membatalkan (timeout dalam 5 detik).
           </span>
         </div>
       </div>
@@ -156,18 +152,18 @@
           <!-- SVG grid -->
           <svg class="w-44 h-44 bg-[#13131b]/60 border border-[#464554]/30 rounded-xl p-3 select-none mx-auto" viewBox="0 0 120 120">
             <!-- Connecting lines -->
-            <line
-              v-for="(dot, idx) in patternDots"
-              v-if="idx > 0"
-              :key="`line-${idx}`"
-              :x1="getDotCoords(patternDots[idx - 1]).x"
-              :y1="getDotCoords(patternDots[idx - 1]).y"
-              :x2="getDotCoords(dot).x"
-              :y2="getDotCoords(dot).y"
-              stroke="#6366f1"
-              stroke-width="3.5"
-              stroke-linecap="round"
-            />
+            <template v-for="(dot, idx) in patternDots" :key="`line-${idx}`">
+              <line
+                v-if="idx > 0"
+                :x1="getDotCoords(patternDots[idx - 1]).x"
+                :y1="getDotCoords(patternDots[idx - 1]).y"
+                :x2="getDotCoords(dot).x"
+                :y2="getDotCoords(dot).y"
+                stroke="#6366f1"
+                stroke-width="3.5"
+                stroke-linecap="round"
+              />
+            </template>
             <!-- Dot grid nodes -->
             <circle
               v-for="i in 9"
@@ -610,21 +606,6 @@ const triggerBiometrics = async () => {
   }
 }
 
-const simulateBiometricSuccess = () => {
-  if (biometricTimeoutId.value) {
-    clearTimeout(biometricTimeoutId.value)
-    biometricTimeoutId.value = null
-  }
-  
-  biometricSuccess.value = true
-  
-  setTimeout(() => {
-    biometricSuccess.value = false
-    isBiometricSimulating.value = false
-    unlockSuccess()
-  }, 800)
-}
-
 // Clear timer on destroy
 onBeforeUnmount(() => {
   if (biometricTimeoutId.value) {
@@ -643,6 +624,14 @@ onMounted(() => {
   if (isBiometricEnabled.value) {
     triggerBiometrics()
   }
+})
+// Expose for testing
+defineExpose({
+  currentMode,
+  pinDigits,
+  patternDots,
+  errorMessage,
+  isBiometricSimulating
 })
 </script>
 

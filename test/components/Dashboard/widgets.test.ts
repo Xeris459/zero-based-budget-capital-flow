@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
 import { useBudgetStore } from '~/stores/budget'
 import { useSettingsStore } from '~/stores/settings'
@@ -107,5 +108,35 @@ describe('Dashboard Widgets', () => {
 
     expect(yearlyWrapper.text()).toContain('Annual Expenses Ledger')
     expect(yearlyWrapper.text()).toContain('Total Spending')
+  })
+
+  it('BudgetTrendChart shows tooltip on mouse events', async () => {
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 0, width: 500, height: 500, bottom: 500, right: 500, x: 0, y: 0, toJSON: () => {}
+    })
+    
+    const wrapper = mount(BudgetTrendChart)
+    
+    // Find an income bar
+    const incomeBar = wrapper.findAll('div[class*="cursor-pointer"]').find(b => b.html().includes('bg-secondary'))
+    expect(incomeBar).toBeDefined()
+    
+    await incomeBar!.trigger('mouseenter')
+    await incomeBar!.trigger('mousemove', { clientX: 100, clientY: 100 })
+    
+    expect(wrapper.text()).toContain('Income')
+    
+    // Find spending bar
+    const spendingBar = wrapper.findAll('div[class*="cursor-pointer"]').find(b => b.html().includes('bg-primary'))
+    await spendingBar!.trigger('mouseenter')
+    expect(wrapper.text()).toContain('Spending')
+    
+    // Find savings bar
+    const savingsBar = wrapper.findAll('div[class*="cursor-pointer"]').find(b => b.html().includes('bg-tertiary'))
+    await savingsBar!.trigger('mouseenter')
+    expect(wrapper.text()).toContain('Savings')
+    
+    await savingsBar!.trigger('mouseleave')
+    expect(wrapper.find('div[class*="absolute bg-[#1f1f27]/95"]').exists()).toBe(false)
   })
 })

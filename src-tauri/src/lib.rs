@@ -7,7 +7,7 @@ pub mod db {
     pub mod manager;
     pub mod models;
 }
-mod commands;
+pub mod commands;
 
 use crate::db::manager::DbState;
 use tauri::Manager;

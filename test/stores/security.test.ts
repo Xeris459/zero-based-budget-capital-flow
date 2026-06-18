@@ -133,9 +133,67 @@ describe('Security Store', () => {
     await securityStore.syncKeyring()
     expect(invokeMock).toHaveBeenCalledWith('disable_biometric', undefined)
 
-    invokeMock.mockResolvedValue(null)
     await securityStore.setBiometricEnabled('fingerprint', true)
     expect(securityStore.security.fingerprintEnabled).toBe(true)
     expect(saveSpy).toHaveBeenCalled()
+  })
+
+  it('handles loadState in Tauri mode when setup is required', async () => {
+    enableTauriMode(true)
+    invokeMock.mockImplementation(async (command: string) => {
+      if (command === 'has_pin_setup') return false
+      return null
+    })
+
+    await securityStore.loadState()
+
+    expect(settingsStore.isTauri).toBe(true)
+    expect(securityStore.isPinSetupRequired).toBe(true)
+    expect(securityStore.isLocked).toBe(true)
+    expect(securityStore.security.pinEnabled).toBe(true)
+  })
+
+  it('handles loadState in Tauri mode when already setup', async () => {
+    enableTauriMode(true)
+    invokeMock.mockImplementation(async (command: string) => {
+      if (command === 'has_pin_setup') return true
+      if (command === 'check_biometric_available') return true
+      return null
+    })
+    
+    // Mock biometric auth to succeed
+    const bioSpy = vi.spyOn(securityStore, 'authenticateBiometric').mockResolvedValue(true)
+    
+    // Persist some security settings
+    localStorage.setItem('zbb_data', JSON.stringify({
+      security: {
+        pinEnabled: true,
+        fingerprintEnabled: true
+      }
+    }))
+
+    await securityStore.loadState()
+
+    expect(securityStore.isPinSetupRequired).toBe(false)
+    expect(securityStore.isLocked).toBe(true)
+    expect(bioSpy).toHaveBeenCalled()
+  })
+
+  it('handles failed biometric authentication', async () => {
+    enableTauriMode(true)
+    invokeMock.mockResolvedValue(null) // authenticate_biometric returns null on fail/cancel
+
+    const result = await securityStore.authenticateBiometric()
+
+    expect(result).toBe(false)
+    expect(securityStore.isLocked).toBe(false) // it was false initially in this test
+  })
+
+  it('unlockWithPin handles catch block when invoke throws', async () => {
+    enableTauriMode(true)
+    securityStore.isPinSetupRequired = false
+    invokeMock.mockRejectedValue(new Error('DB Error'))
+
+    await expect(securityStore.unlockWithPin('0000')).rejects.toThrow('DB Error')
   })
 })

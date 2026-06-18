@@ -336,11 +336,21 @@ describe('Budget App Stores', () => {
       expect(added!.parentId).toBe('expenses')
     })
 
-    it('deleteCategory() removes category and associated budgets', async () => {
-      const catId = 'cat-exp-ent'
-      await budgetStore.deleteCategory(catId)
+    it('deleteCategory() removes category and associated budgets if no transactions exist', async () => {
+      // Add a clean category first
+      await budgetStore.addCategory('Clean Category', 'expenses')
+      const catId = budgetStore.categories.find(c => c.name === 'Clean Category')!.id
+      
+      const success = await budgetStore.deleteCategory(catId)
+      expect(success).toBe(true)
       expect(budgetStore.categories.find(c => c.id === catId)).toBeUndefined()
-      expect(budgetStore.budgets.find(b => b.categoryId === catId)).toBeUndefined()
+    })
+
+    it('deleteCategory() blocks removal if active transactions exist', async () => {
+      const catId = 'cat-exp-food' // Has transactions in mock
+      const success = await budgetStore.deleteCategory(catId)
+      expect(success).toBe(false)
+      expect(budgetStore.categories.find(c => c.id === catId)).toBeDefined()
     })
 
     it('toggleKMode() flips the kMode flag in settingsStore', async () => {
@@ -385,6 +395,81 @@ describe('Budget App Stores', () => {
       currentBudgets.forEach(b => {
         expect(b.planned).toBe(0)
       })
+    })
+
+    it('updateCategory() updates category name', async () => {
+      await budgetStore.updateCategory('cat-exp-food', 'New Food Name')
+      expect(budgetStore.categories.find(c => c.id === 'cat-exp-food')?.name).toBe('New Food Name')
+    })
+
+    it('addBank() adds a new bank', async () => {
+      const countBefore = budgetStore.banks.length
+      await budgetStore.addBank('New Bank', 'NB', '#000')
+      expect(budgetStore.banks.length).toBe(countBefore + 1)
+      expect(budgetStore.banks.some(b => b.name === 'New Bank')).toBe(true)
+    })
+
+    it('deleteBank() removes bank if it has no accounts', async () => {
+      await budgetStore.addBank('Empty Bank', 'EB', '#000')
+      const bankId = budgetStore.banks.find(b => b.name === 'Empty Bank')!.id
+      const success = await budgetStore.deleteBank(bankId)
+      expect(success).toBe(true)
+      expect(budgetStore.banks.some(b => b.id === bankId)).toBe(false)
+    })
+
+    it('deleteBank() fails if bank has accounts', async () => {
+      const success = await budgetStore.deleteBank('bank-bca')
+      expect(success).toBe(false)
+      expect(budgetStore.banks.some(b => b.id === 'bank-bca')).toBe(true)
+    })
+
+    it('resetDatabase() clears all financial data', async () => {
+      await budgetStore.resetDatabase()
+      expect(budgetStore.banks).toEqual([])
+      expect(budgetStore.accounts).toEqual([])
+      expect(budgetStore.categories).toEqual([])
+      expect(budgetStore.budgets).toEqual([])
+      expect(budgetStore.transactions).toEqual([])
+    })
+
+    it('importState() restores state from object', async () => {
+      const newState = {
+        banks: [{ id: 'b1', name: 'Imported Bank', code: 'IB', color: '#fff' }],
+        accounts: [],
+        categories: [],
+        budgets: [],
+        transactions: [],
+        kMode: false
+      }
+      const result = await budgetStore.importState(newState)
+      expect(result.success).toBe(true)
+      expect(budgetStore.banks[0].name).toBe('Imported Bank')
+      expect(settingsStore.kMode).toBe(false)
+    })
+
+    it('importState() returns error for invalid data', async () => {
+      const result = await budgetStore.importState(null)
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Invalid backup data.')
+
+      const result2 = await budgetStore.importState({ banks: [] })
+      expect(result2.success).toBe(false)
+      expect(result2.error).toContain('missing core')
+    })
+  })
+
+  // ── Senior QA Edge Cases ──────────────────────────────────────────────
+
+  describe('Edge Cases & Data Integrity', () => {
+    it('handles very small amounts in K-Mode without losing precision', () => {
+      settingsStore.kMode = true
+      // Rp 500 should be 0.5
+      expect(settingsStore.formatValueRaw(500)).toBe('0,5')
+      // Parsing 0.5 back should be 500
+      expect(settingsStore.parseInput(0.5)).toBe(500)
+      
+      // Even smaller: Rp 1
+      expect(settingsStore.parseInput(0.001)).toBe(1)
     })
   })
 

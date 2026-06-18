@@ -399,7 +399,7 @@
             <div class="flex items-center justify-between p-3.5 bg-surface-container-high/20 border border-[#464554]/10 rounded-lg">
               <div class="flex flex-col gap-0.5">
                 <span class="text-xs font-bold text-on-surface">4-Digit PIN Lock</span>
-                <span class="text-[10px] text-on-surface-variant font-semibold" v-if="securityStore.security.pinEnabled">PIN is active ({{ securityStore.security.pinVal }})</span>
+                <span class="text-[10px] text-on-surface-variant font-semibold" v-if="securityStore.security.pinEnabled">PIN is active (****)</span>
                 <span class="text-[10px] text-on-surface-variant font-semibold" v-else>Not configured</span>
               </div>
               <div class="flex items-center gap-3">
@@ -1297,7 +1297,12 @@ const exportBackup = async () => {
       maxDebtLimit: settingsStore.maxDebtLimit,
       minSavingsRate: settingsStore.minSavingsRate,
       lowCashThreshold: settingsStore.lowCashThreshold,
-      security: securityStore.security
+      security: {
+        ...securityStore.security,
+        passwordVal: '',
+        pinVal: '',
+        patternVal: ''
+      }
     }
 
     const jsonContent = JSON.stringify(payload, null, 2)

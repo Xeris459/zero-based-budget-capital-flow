@@ -634,10 +634,16 @@ export const useBudgetStore = defineStore('budget', {
           security: securityStore.security
         }))
 
+        // Never store sensitive credentials in localStorage (VULN-003)
+        payload.security.pinVal = ''
+        payload.security.patternVal = ''
+        // passwordVal is a hash in Tauri mode, but in Web mode it might be plain text.
+        // For safety, clear it as well if it's not a hash.
+        if (!settingsStore.isTauri) {
+          payload.security.passwordVal = ''
+        }
+
         if (settingsStore.isTauri) {
-          // Never store plain PIN in localStorage for security
-          payload.security.pinVal = ''
-          
           if (!securityStore.isLocked) {
             try {
               // Save standard settings configuration to config SQLite table
@@ -1005,6 +1011,13 @@ export const useBudgetStore = defineStore('budget', {
 
     // Delete custom subcategory
     async deleteCategory(id: string) {
+      // Safeguard: Don't delete if category has active transactions
+      const hasTransactions = this.transactions.some(t => t.categoryId === id)
+      if (hasTransactions) {
+        console.error('Cannot delete category with active transactions.')
+        return false
+      }
+
       const settingsStore = useSettingsStore()
       const securityStore = useSecurityStore()
       if (settingsStore.isTauri && !securityStore.isLocked) {
@@ -1012,13 +1025,14 @@ export const useBudgetStore = defineStore('budget', {
           await safeInvoke('db_delete_category', { id })
         } catch (e) {
           console.error('Failed to delete category in SQLite:', e)
-          return
+          return false
         }
       }
 
       this.categories = this.categories.filter(c => c.id !== id)
       this.budgets = this.budgets.filter(b => b.categoryId !== id)
       this.saveState()
+      return true
     },
 
     // Add custom bank

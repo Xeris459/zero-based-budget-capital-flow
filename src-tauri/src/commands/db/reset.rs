@@ -7,6 +7,10 @@ use crate::errors::AppError;
 /// knows not to re-seed on the next startup.
 #[tauri::command]
 pub fn db_reset_all_data(state: State<DbState>) -> Result<(), AppError> {
+    db_reset_all_data_inner(&state)
+}
+
+pub fn db_reset_all_data_inner(state: &DbState) -> Result<(), AppError> {
     let conn = state.get_conn()?;
 
     conn.execute_batch(
