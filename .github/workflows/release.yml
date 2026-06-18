@@ -1,8 +1,8 @@
 name: Release
 
-# Release workflow is intentionally disabled for now.
-# Desktop support: Windows only.
-# Android release will be added later when the mobile pipeline is ready.
+permissions:
+  contents: write
+
 on:
   push:
     tags:
@@ -16,7 +16,6 @@ env:
 jobs:
   release-windows:
     name: Release Windows Desktop
-    if: false # Keep disabled until you are ready to publish releases
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,7 +23,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "20"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
@@ -59,16 +58,18 @@ jobs:
       - name: Run tests
         run: pnpm test
 
-      - name: Build web app
-        run: pnpm build
-
       - name: Build Windows app
         run: pnpm tauri:build
 
       - name: Get version from tag
         id: get_version
         shell: bash
-        run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "version=v0.1.0-manual" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -79,26 +80,11 @@ jobs:
             ## Release ${{ steps.get_version.outputs.version }}
 
             ### Downloads
-            - **Windows Desktop**: MSI installer
-            - **Android**: Planned for a future release
-
-            ### Notes
-            This release workflow is currently disabled and only targets Windows desktop builds.
+            - **Windows Desktop**: Installers (.msi / .exe)
           draft: false
           prerelease: false
           files: |
-            src-tauri/target/release/bundle/msi/*
-            dist/**
+            src-tauri/target/release/bundle/**/*.msi
+            src-tauri/target/release/bundle/**/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # Placeholder for future Android release support.
-  # Enable only after the Android pipeline is ready.
-  # build-android:
-  #   name: Build Android Release
-  #   if: false
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Setup Android toolchain
-  #       run: echo "TODO: add Android release pipeline"
