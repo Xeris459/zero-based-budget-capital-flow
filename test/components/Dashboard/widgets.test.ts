@@ -46,6 +46,30 @@ describe('Dashboard Widgets', () => {
     expect(testState.push).toHaveBeenCalledWith('/accounts')
   })
 
+  it('truncates account summary to 2 items and toggles accordion when clicking more', async () => {
+    const wrapper = mount(AccountsSummary)
+
+    expect(wrapper.text()).toContain('Checking Account')
+    expect(wrapper.text()).toContain('High-Yield Savings')
+
+    const toggleBtn = wrapper.find('button')
+    expect(toggleBtn.exists()).toBe(true)
+    expect(toggleBtn.text()).toContain('Lihat 2 Rekening Lainnya')
+
+    await toggleBtn.trigger('click')
+    expect(toggleBtn.text()).toContain('Tampilkan Lebih Sedikit')
+
+    await toggleBtn.trigger('click')
+    expect(toggleBtn.text()).toContain('Lihat 2 Rekening Lainnya')
+  })
+
+  it('does not render toggle button if there are 2 or fewer accounts', async () => {
+    budgetStore.accounts = budgetStore.accounts.slice(0, 2)
+    const wrapper = mount(AccountsSummary)
+
+    expect(wrapper.find('button').exists()).toBe(false)
+  })
+
   it('renders income overview and navigates to planner', async () => {
     const wrapper = mount(IncomeOverview)
 
@@ -70,7 +94,11 @@ describe('Dashboard Widgets', () => {
     expect(wrapper.html()).toContain('w-full gap-1.5 sm:gap-2 px-1')
   })
 
-  it('renders spending and savings doughnut charts with hover details', async () => {
+  it('renders spending, savings, and debt doughnut charts with hover details', async () => {
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 0, width: 300, height: 300, bottom: 300, right: 300, x: 0, y: 0, toJSON: () => {}
+    })
+
     const spendingWrapper = mount(DoughnutChart, {
       props: { type: 'spending' }
     })
@@ -81,11 +109,23 @@ describe('Dashboard Widgets', () => {
     await spendingSlices[0].trigger('mouseenter')
     expect(spendingWrapper.text()).toMatch(/%/)
 
+    await spendingWrapper.trigger('mousemove', { clientX: 50, clientY: 50 })
+    const popover = spendingWrapper.find('div[class*="absolute bg-[#0b0f15]/95"]')
+    expect(popover.exists()).toBe(true)
+    expect(popover.attributes('style')).toContain('left: 62px') // 50 + 12
+    expect(popover.attributes('style')).toContain('top: 62px')  // 50 + 12
+
     const savingsWrapper = mount(DoughnutChart, {
       props: { type: 'savings' }
     })
 
     expect(savingsWrapper.text()).toContain('Savings Breakdown')
+
+    const debtWrapper = mount(DoughnutChart, {
+      props: { type: 'debt' }
+    })
+
+    expect(debtWrapper.text()).toContain('Debt Breakdown')
   })
 
   it('renders detail modal content for net worth and annual expenses', async () => {

@@ -41,7 +41,8 @@ fn run_migrations(conn: &rusqlite::Connection, key: &[u8; 32]) -> Result<(), App
         CREATE TABLE IF NOT EXISTS categories (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
-            parent_id TEXT NOT NULL
+            parent_id TEXT NOT NULL,
+            global_category TEXT
         );
         
         CREATE TABLE IF NOT EXISTS budgets (
@@ -80,6 +81,16 @@ fn run_migrations(conn: &rusqlite::Connection, key: &[u8; 32]) -> Result<(), App
     ).unwrap_or(0);
     if column_exists == 0 {
         let _ = conn.execute("ALTER TABLE accounts ADD COLUMN active INTEGER NOT NULL DEFAULT 1", []);
+    }
+
+    // Migration: Add global_category column to categories if database already exists without it
+    let col_categories_global_exists: i64 = conn.query_row(
+        "SELECT count(*) FROM pragma_table_info('categories') WHERE name='global_category'",
+        [],
+        |row| row.get(0),
+    ).unwrap_or(0);
+    if col_categories_global_exists == 0 {
+        let _ = conn.execute("ALTER TABLE categories ADD COLUMN global_category TEXT", []);
     }
     
     // Seed defaults if not already seeded

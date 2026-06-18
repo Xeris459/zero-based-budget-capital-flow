@@ -28,6 +28,8 @@ pub struct Category {
     pub name: String,
     #[serde(rename = "parentId")]
     pub parent_id: String,
+    #[serde(rename = "globalCategory")]
+    pub global_category: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

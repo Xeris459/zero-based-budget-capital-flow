@@ -143,6 +143,16 @@ export const useBudgetStore = defineStore('budget', {
         .reduce((sum, t) => sum - t.amount, 0)
     },
 
+    // Total debt actual paid
+    totalDebtPaid(): number {
+      return this.periodTransactions
+        .filter(t => {
+          const cat = this.categories.find(c => c.id === t.categoryId)
+          return cat && cat.parentId === 'debt'
+        })
+        .reduce((sum, t) => sum - t.amount, 0)
+    },
+
     // Savings rate calculation
     savingsRate(): number {
       const actualInflow = this.periodTransactions
@@ -165,33 +175,63 @@ export const useBudgetStore = defineStore('budget', {
 
     // Dynamic SVG Slices for Spending Breakdown
     spendingSlices(): any[] {
-      let housing = 0
-      let food = 0
-      let utils = 0
-      let ent = 0
-      let savings = 0
-      let debt = 0
+      const globalCategories = [
+        { name: 'Housing', color: '#c0c1ff', keywords: ['house', 'home', 'rent', 'housing', 'apartment', 'kost', 'kontrakan', 'sewa', 'huni', 'kos', 'tempat tinggal'] },
+        { name: 'Food', color: '#4edea3', keywords: ['food', 'grocery', 'groceries', 'dining', 'cafe', 'restaurant', 'eat', 'makan', 'restoran', 'snack', 'jajan', 'cemilan', 'kopi', 'coffee', 'belanja bulanan', 'supermarket', 'pasar'] },
+        { name: 'Utilities', color: '#ffb95f', keywords: ['util', 'bill', 'water', 'electricity', 'wifi', 'internet', 'phone', 'pulsa', 'listrik', 'air', 'telepon', 'paket data', 'token', 'iuran', 'sampah', 'keamanan', 'pajak'] },
+        { name: 'Entertainment', color: '#908fa0', keywords: ['ent', 'game', 'movie', 'cinema', 'ticket', 'holiday', 'travel', 'hiburan', 'nonton', 'bioskop', 'wisata', 'rekreasi', 'hobi', 'hobby', 'netflix', 'spotify', 'gaming', 'liburan', 'jalan-jalan'] },
+        { name: 'Other Expenses', color: '#8083ff', keywords: [] }
+      ]
 
-      this.periodTransactions.forEach(t => {
-        const cat = this.categories.find(c => c.id === t.categoryId)
-        if (!cat) return
-        const amt = -t.amount
-        if (cat.id === 'cat-exp-housing') housing += amt
-        else if (cat.id === 'cat-exp-food') food += amt
-        else if (cat.id === 'cat-exp-utils') utils += amt
-        else if (cat.id === 'cat-exp-ent') ent += amt
-        else if (cat.parentId === 'savings') savings += amt
-        else if (cat.parentId === 'debt' || cat.id === 'cat-debt-cc') debt += amt
+      const expenseCats = this.categories.filter(c => c.parentId === 'expenses')
+      const grouped = {}
+
+      globalCategories.forEach(gc => {
+        grouped[gc.name] = {
+          category: gc.name,
+          amount: 0,
+          color: gc.color,
+          subcategories: []
+        }
       })
 
-      const rawSlices = [
-        { category: 'Housing', amount: housing, color: '#c0c1ff' },
-        { category: 'Food', amount: food, color: '#4edea3' },
-        { category: 'Utilities', amount: utils, color: '#ffb95f' },
-        { category: 'Savings', amount: savings, color: '#8083ff' },
-        { category: 'Debt', amount: debt, color: '#ffb4ab' },
-        { category: 'Entertainment', amount: ent, color: '#908fa0' }
-      ]
+      expenseCats.forEach(cat => {
+        const amount = this.periodTransactions
+          .filter(t => t.categoryId === cat.id)
+          .reduce((sum, t) => sum - t.amount, 0)
+        
+        if (amount <= 0) return
+
+        // Classify
+        const nameLower = cat.name.toLowerCase()
+        const idLower = cat.id.toLowerCase()
+        let matchedGroup = cat.globalCategory || 'Other Expenses'
+
+        if (!cat.globalCategory || cat.globalCategory === 'Other Expenses') {
+          let found = false
+          for (const gc of globalCategories) {
+            if (gc.name === 'Other Expenses') continue
+            const matchesKeyword = gc.keywords.some(kw => nameLower.includes(kw))
+            const matchesId = idLower.includes(gc.name.toLowerCase()) || idLower.includes(gc.name.toLowerCase().substring(0, 4))
+            if (matchesId || matchesKeyword) {
+              matchedGroup = gc.name
+              found = true
+              break
+            }
+          }
+          if (!found) {
+            matchedGroup = 'Other Expenses'
+          }
+        }
+
+        grouped[matchedGroup].amount += amount
+        grouped[matchedGroup].subcategories.push({
+          name: cat.name,
+          amount
+        })
+      })
+
+      const rawSlices = Object.values(grouped).filter((s: any) => s.amount > 0) as any[]
 
       const total = rawSlices.reduce((sum, s) => sum + s.amount, 0) || 1
 
@@ -212,27 +252,137 @@ export const useBudgetStore = defineStore('budget', {
 
     // Dynamic SVG Slices for Savings Breakdown
     savingsSlices(): any[] {
-      let emergency = 0
-      let retirement = 0
-      let vacation = 0
-      let car = 0
+      const globalCategories = [
+        { name: 'Emergency Fund', color: '#4edea3', keywords: ['emergency', 'darurat', 'emg'] },
+        { name: 'Retirement', color: '#c0c1ff', keywords: ['retirement', 'pensiun', 'tua', 'ret'] },
+        { name: 'Vacation', color: '#ffb95f', keywords: ['vacation', 'liburan', 'vac', 'wisata'] },
+        { name: 'New Car', color: '#ca8100', keywords: ['car', 'mobil', 'motor', 'kendaraan', 'vehicle'] },
+        { name: 'Other Savings', color: '#8083ff', keywords: [] }
+      ]
 
-      this.periodTransactions.forEach(t => {
-        const cat = this.categories.find(c => c.id === t.categoryId)
-        if (!cat || cat.parentId !== 'savings') return
-        const amt = -t.amount
-        if (cat.id === 'cat-sav-emg') emergency += amt
-        else if (cat.id === 'cat-sav-ret') retirement += amt
-        else if (cat.id === 'cat-sav-vac') vacation += amt
-        else if (cat.id === 'cat-sav-car') car += amt
+      const savingsCats = this.categories.filter(c => c.parentId === 'savings')
+      const grouped = {}
+
+      globalCategories.forEach(gc => {
+        grouped[gc.name] = {
+          category: gc.name,
+          amount: 0,
+          color: gc.color,
+          subcategories: []
+        }
       })
 
-      const rawSlices = [
-        { category: 'Emergency Fund', amount: emergency || 1, color: '#4edea3' },
-        { category: 'Retirement', amount: retirement || 0, color: '#c0c1ff' },
-        { category: 'Vacation', amount: vacation || 0, color: '#ffb95f' },
-        { category: 'New Car', amount: car || 0, color: '#ca8100' }
+      savingsCats.forEach(cat => {
+        const amount = this.periodTransactions
+          .filter(t => t.categoryId === cat.id)
+          .reduce((sum, t) => sum - t.amount, 0)
+        
+        if (amount <= 0) return
+
+        // Classify
+        const nameLower = cat.name.toLowerCase()
+        const idLower = cat.id.toLowerCase()
+        let matchedGroup = cat.globalCategory || 'Other Savings'
+
+        if (!cat.globalCategory || cat.globalCategory === 'Other Savings') {
+          let found = false
+          for (const gc of globalCategories) {
+            if (gc.name === 'Other Savings') continue
+            const matchesKeyword = gc.keywords.some(kw => nameLower.includes(kw))
+            const matchesId = idLower.includes(gc.name.toLowerCase().substring(0, 4))
+            if (matchesId || matchesKeyword) {
+              matchedGroup = gc.name
+              found = true
+              break
+            }
+          }
+          if (!found) {
+            matchedGroup = 'Other Savings'
+          }
+        }
+
+        grouped[matchedGroup].amount += amount
+        grouped[matchedGroup].subcategories.push({
+          name: cat.name,
+          amount
+        })
+      })
+
+      const rawSlices = Object.values(grouped).filter((s: any) => s.amount > 0) as any[]
+
+      const total = rawSlices.reduce((sum, s) => sum + s.amount, 0) || 1
+      let currentOffset = 0
+      return rawSlices.map(slice => {
+        const percentage = Math.round((slice.amount / total) * 100)
+        const dash = (slice.amount / total) * 251.2
+        const offset = currentOffset
+        currentOffset += dash
+        return {
+          ...slice,
+          percentage,
+          dash: parseFloat(dash.toFixed(1)),
+          offset: parseFloat(offset.toFixed(1))
+        }
+      })
+    },
+
+    // Dynamic SVG Slices for Debt Breakdown
+    debtSlices(): any[] {
+      const globalCategories = [
+        { name: 'Credit Card', color: '#ffb4ab', keywords: ['credit card', 'kartu kredit', 'cc', 'debt-cc'] },
+        { name: 'Loans & Installments', color: '#ca8100', keywords: ['loan', 'pinjaman', 'hutang', 'debt', 'kpr', 'cicilan'] },
+        { name: 'Other Debts', color: '#f43f5e', keywords: [] }
       ]
+
+      const debtCats = this.categories.filter(c => c.parentId === 'debt')
+      const grouped = {}
+
+      globalCategories.forEach(gc => {
+        grouped[gc.name] = {
+          category: gc.name,
+          amount: 0,
+          color: gc.color,
+          subcategories: []
+        }
+      })
+
+      debtCats.forEach(cat => {
+        const amount = this.periodTransactions
+          .filter(t => t.categoryId === cat.id)
+          .reduce((sum, t) => sum - t.amount, 0)
+        
+        if (amount <= 0) return
+
+        // Classify
+        const nameLower = cat.name.toLowerCase()
+        const idLower = cat.id.toLowerCase()
+        let matchedGroup = cat.globalCategory || 'Other Debts'
+
+        if (!cat.globalCategory || cat.globalCategory === 'Other Debts') {
+          let found = false
+          for (const gc of globalCategories) {
+            if (gc.name === 'Other Debts') continue
+            const matchesKeyword = gc.keywords.some(kw => nameLower.includes(kw))
+            const matchesId = idLower.includes(gc.name.toLowerCase().substring(0, 4))
+            if (matchesId || matchesKeyword) {
+              matchedGroup = gc.name
+              found = true
+              break
+            }
+          }
+          if (!found) {
+            matchedGroup = 'Other Debts'
+          }
+        }
+
+        grouped[matchedGroup].amount += amount
+        grouped[matchedGroup].subcategories.push({
+          name: cat.name,
+          amount
+        })
+      })
+
+      const rawSlices = Object.values(grouped).filter((s: any) => s.amount > 0) as any[]
 
       const total = rawSlices.reduce((sum, s) => sum + s.amount, 0) || 1
       let currentOffset = 0
@@ -967,11 +1117,11 @@ export const useBudgetStore = defineStore('budget', {
     },
 
     // Add custom subcategory
-    async addCategory(name: string, parentId: 'income' | 'expenses' | 'savings' | 'debt') {
+    async addCategory(name: string, parentId: 'income' | 'expenses' | 'savings' | 'debt', globalCategory?: string) {
       const settingsStore = useSettingsStore()
       const securityStore = useSecurityStore()
       const id = 'cat-' + parentId.substring(0, 3) + '-' + Math.random().toString(36).substring(2, 9)
-      const category = { id, name, parentId }
+      const category = { id, name, parentId, globalCategory }
 
       if (settingsStore.isTauri && !securityStore.isLocked) {
         try {
@@ -987,14 +1137,14 @@ export const useBudgetStore = defineStore('budget', {
     },
 
     // Edit custom subcategory name
-    async updateCategory(id: string, name: string) {
+    async updateCategory(id: string, name: string, globalCategory?: string) {
       const settingsStore = useSettingsStore()
       const securityStore = useSecurityStore()
       
       const cat = this.categories.find(c => c.id === id)
       if (!cat) return
 
-      const updatedCategory = { ...cat, name }
+      const updatedCategory = { ...cat, name, globalCategory }
 
       if (settingsStore.isTauri && !securityStore.isLocked) {
         try {
@@ -1006,6 +1156,7 @@ export const useBudgetStore = defineStore('budget', {
       }
 
       cat.name = name
+      cat.globalCategory = globalCategory
       this.saveState()
     },
 

@@ -7,9 +7,10 @@
     <DashboardKpiRibbon />
 
     <!-- Charts Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-gutter mb-gutter">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter mb-gutter">
       <DashboardDoughnutChart type="spending" />
       <DashboardDoughnutChart type="savings" />
+      <DashboardDoughnutChart type="debt" />
     </div>
 
     <!-- Budget Tracking Chart & Side panels -->

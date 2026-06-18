@@ -80,7 +80,7 @@ pub fn db_get_initial_data_inner(state: &DbState) -> Result<InitialData, AppErro
     })?.collect::<Result<Vec<_>, _>>()?;
 
     // 4. Fetch Categories
-    let mut stmt = conn.prepare("SELECT id, name, parent_id FROM categories")?;
+    let mut stmt = conn.prepare("SELECT id, name, parent_id, global_category FROM categories")?;
     let categories = stmt.query_map([], |row| {
         let enc_name: String = row.get(1)?;
         let name = decrypt_data(&enc_name, &key).unwrap_or_else(|_| "Invalid Category".to_string());
@@ -89,6 +89,7 @@ pub fn db_get_initial_data_inner(state: &DbState) -> Result<InitialData, AppErro
             id: row.get(0)?,
             name,
             parent_id: row.get(2)?,
+            global_category: row.get(3)?,
         })
     })?.collect::<Result<Vec<_>, _>>()?;
 

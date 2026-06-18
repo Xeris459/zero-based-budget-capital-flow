@@ -231,7 +231,7 @@ describe('Budget App Stores', () => {
 
     it('spendingSlices computes SVG slices for expenses', () => {
       const slices = budgetStore.spendingSlices
-      expect(slices.length).toBe(6) // Housing, Food, Utilities, Savings, Debt, Entertainment
+      expect(slices.length).toBe(4) // Only 4 expense categories have actual transactions in mock
       slices.forEach(s => {
         expect(s).toHaveProperty('category')
         expect(s).toHaveProperty('amount')
@@ -239,6 +239,94 @@ describe('Budget App Stores', () => {
         expect(s).toHaveProperty('offset')
         expect(s).toHaveProperty('percentage')
       })
+    })
+
+    it('savingsSlices computes SVG slices for savings goals', () => {
+      const slices = budgetStore.savingsSlices
+      expect(slices.length).toBe(1) // Only Emergency Fund has actual transaction in mock
+      slices.forEach(s => {
+        expect(s).toHaveProperty('category')
+        expect(s).toHaveProperty('amount')
+        expect(s).toHaveProperty('dash')
+        expect(s).toHaveProperty('offset')
+        expect(s).toHaveProperty('percentage')
+      })
+    })
+
+    it('debtSlices computes SVG slices for debt payoffs', () => {
+      const slices = budgetStore.debtSlices
+      expect(slices.length).toBe(1) // Only Credit Card Payment has actual transaction in mock
+      slices.forEach(s => {
+        expect(s).toHaveProperty('category')
+        expect(s).toHaveProperty('amount')
+        expect(s).toHaveProperty('dash')
+        expect(s).toHaveProperty('offset')
+        expect(s).toHaveProperty('percentage')
+      })
+    })
+    it('custom globalCategory mapping takes precedence in spendingSlices, savingsSlices, and debtSlices', () => {
+      // 1. Setup a custom category with globalCategory under expenses
+      const customExpenseCat = { id: 'cat-custom-exp', name: 'Random Label', parentId: 'expenses' as const, globalCategory: 'Food' }
+      budgetStore.categories.push(customExpenseCat)
+      // Add transaction for this custom category
+      budgetStore.transactions.push({
+        id: 'tx-custom-exp',
+        date: '2026-06-10',
+        description: 'Random dinner',
+        amount: -150000,
+        accountId: 'acc-checking',
+        categoryId: 'cat-custom-exp',
+        shiftToNextMonth: false
+      })
+
+      // Get slices
+      const slices = budgetStore.spendingSlices
+      const foodSlice = slices.find(s => s.category === 'Food')
+      expect(foodSlice).toBeDefined()
+      // Subcategories under Food slice should contain our custom expense subcategory
+      const customSub = foodSlice.subcategories.find(sub => sub.name === 'Random Label')
+      expect(customSub).toBeDefined()
+      expect(customSub.amount).toBe(150000)
+
+      // 2. Setup a custom category with globalCategory under savings
+      const customSavingsCat = { id: 'cat-custom-sav', name: 'Future Car Goal', parentId: 'savings' as const, globalCategory: 'Vacation' }
+      budgetStore.categories.push(customSavingsCat)
+      budgetStore.transactions.push({
+        id: 'tx-custom-sav',
+        date: '2026-06-10',
+        description: 'Goal transfer',
+        amount: -250000,
+        accountId: 'acc-savings',
+        categoryId: 'cat-custom-sav',
+        shiftToNextMonth: false
+      })
+
+      const savingsSlices = budgetStore.savingsSlices
+      const vacationSlice = savingsSlices.find(s => s.category === 'Vacation')
+      expect(vacationSlice).toBeDefined()
+      const customSavSub = vacationSlice.subcategories.find(sub => sub.name === 'Future Car Goal')
+      expect(customSavSub).toBeDefined()
+      expect(customSavSub.amount).toBe(250000)
+
+      // 3. Setup a custom category with globalCategory under debt
+      const customDebtCat = { id: 'cat-custom-debt', name: 'Mortgage Loan', parentId: 'debt' as const, globalCategory: 'Credit Card' }
+      budgetStore.categories.push(customDebtCat)
+      budgetStore.transactions.push({
+        id: 'tx-custom-debt',
+        date: '2026-06-10',
+        description: 'Debt pay',
+        amount: -350000,
+        accountId: 'acc-checking',
+        categoryId: 'cat-custom-debt',
+        shiftToNextMonth: false
+      })
+
+      const debtSlices = budgetStore.debtSlices
+      const ccSlice = debtSlices.find(s => s.category === 'Credit Card')
+      expect(ccSlice).toBeDefined()
+      const customDebtSub = ccSlice.subcategories.find(sub => sub.name === 'Mortgage Loan')
+      expect(customDebtSub).toBeDefined()
+      expect(customDebtSub.amount).toBe(350000)
     })
 
     it('filteredLedger returns transactions sorted from newest first, including same-day index order', () => {

@@ -19,6 +19,7 @@ export interface Category {
   id: string
   name: string
   parentId: 'income' | 'expenses' | 'savings' | 'debt'
+  globalCategory?: string
 }
 
 export interface Budget {

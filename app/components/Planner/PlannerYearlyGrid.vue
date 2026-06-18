@@ -30,7 +30,7 @@
         <table class="w-full text-left border-collapse min-w-[1690px]">
           <thead>
             <tr class="border-b border-[#464554]/25 bg-surface-container-low/40">
-              <th class="text-[10px] text-on-surface-variant uppercase font-bold px-3 py-2 border-r border-[#464554]/30 min-w-[240px]">Category</th>
+              <th class="text-[10px] text-on-surface-variant uppercase font-bold px-3 py-2 border-r border-[#464554]/30 min-w-[320px]">Category</th>
               <th
                 v-for="(label, idx) in monthLabels"
                 :key="idx"
@@ -49,30 +49,60 @@
               class="border-b border-[#464554]/10 hover:bg-surface-bright/5 transition-colors group"
             >
               <!-- Category Name -->
-              <td class="px-3 py-2 text-xs text-on-surface border-r border-[#464554]/30 min-w-[240px]">
+              <td class="px-3 py-2 text-xs text-on-surface border-r border-[#464554]/30 min-w-[320px]">
                 <div class="flex items-center justify-between gap-2">
-                  <div class="flex items-center gap-2 flex-1">
-                    <span v-if="editingCatId !== cat.id" class="font-bold whitespace-nowrap">{{ cat.name }}</span>
-                    <input
-                      v-else
-                      v-model="editingCatName"
-                      @blur="saveCategoryName(cat.id)"
-                      @keyup.enter="saveCategoryName(cat.id)"
-                      class="bg-surface-dim border border-primary/50 rounded px-2 py-0.5 text-xs font-semibold focus:outline-none w-full text-on-surface"
-                      v-focus
-                    />
+                  <div class="flex items-center gap-2 flex-1 flex-wrap">
+                    <div v-if="editingCatId !== cat.id" class="flex items-center gap-2 flex-wrap">
+                      <span class="font-bold whitespace-nowrap">{{ cat.name }}</span>
+                      <span
+                        v-if="group.id !== 'income'"
+                        class="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-[#1f1f27] border border-[#464554]/40 text-on-surface-variant/80"
+                      >
+                        {{ cat.globalCategory || 'Unclassified' }}
+                      </span>
+                    </div>
+                    <div v-else class="flex items-center gap-1.5 flex-wrap w-full">
+                      <input
+                        v-model="editingCatName"
+                        class="bg-surface-dim border border-primary/50 rounded px-2 py-0.5 text-xs font-semibold focus:outline-none w-28 text-on-surface"
+                        placeholder="Name"
+                        @blur="saveCategoryChanges(cat.id, $event)"
+                        @keyup.enter="saveCategoryChanges(cat.id)"
+                        v-focus
+                      />
+                      <select
+                        v-if="group.id !== 'income'"
+                        v-model="editingCatGlobal"
+                        class="bg-surface-dim border border-primary/50 rounded px-1.5 py-0.5 text-xs font-semibold focus:outline-none text-on-surface w-32 cursor-pointer"
+                      >
+                        <option value="">(Select Global)</option>
+                        <option v-for="g in getGlobalCategories(group.id)" :key="g" :value="g">{{ g }}</option>
+                      </select>
+                      <button
+                        @click="saveCategoryChanges(cat.id)"
+                        class="p-0.5 text-secondary hover:text-secondary/80 cursor-pointer"
+                        title="Save"
+                      >
+                        <Check class="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        @click="editingCatId = null"
+                        class="p-0.5 text-on-surface-variant hover:text-error cursor-pointer"
+                        title="Cancel"
+                      >
+                        <X class="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
-                  <div class="flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity whitespace-nowrap">
+                  <div v-if="editingCatId !== cat.id" class="flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity whitespace-nowrap">
                     <button
-                      v-if="editingCatId !== cat.id"
-                      @click="startEditCategory(cat.id, cat.name)"
+                      @click="startEditCategory(cat.id, cat.name, cat.globalCategory)"
                       class="text-on-surface-variant hover:text-primary transition-colors p-0.5 cursor-pointer"
                       title="Rename Subcategory"
                     >
                       <Edit2 class="w-3.5 h-3.5" />
                     </button>
                     <button
-                      v-if="editingCatId !== cat.id"
                       @click="deleteCategory(cat.id)"
                       class="text-on-surface-variant hover:text-error transition-colors p-0.5 cursor-pointer"
                       title="Delete Subcategory"
@@ -122,6 +152,14 @@
                     class="bg-[#13131b] border border-primary/50 rounded px-2.5 py-1 text-xs font-semibold focus:outline-none w-56 text-on-surface"
                     v-focus
                   />
+                  <select
+                    v-if="group.id !== 'income'"
+                    v-model="newCatGlobal"
+                    class="bg-[#13131b] border border-[#464554]/40 rounded px-2 py-1 text-xs font-semibold focus:outline-none text-on-surface w-40 cursor-pointer"
+                  >
+                    <option value="">(Select Global)</option>
+                    <option v-for="g in getGlobalCategories(group.id)" :key="g" :value="g">{{ g }}</option>
+                  </select>
                   <button
                     @click="saveNewCategory(group.id)"
                     class="px-2.5 py-1 rounded bg-primary text-xs font-bold text-on-primary hover:bg-primary/95 transition-all cursor-pointer"
@@ -129,7 +167,7 @@
                     Add
                   </button>
                   <button
-                    @click="addingGroupId = null"
+                    @click="addingGroupId = null; newCatGlobal = ''"
                     class="px-2.5 py-1 rounded bg-surface-container hover:bg-surface-bright text-xs font-bold text-on-surface transition-all border border-[#464554]/40 cursor-pointer"
                   >
                     Cancel
@@ -148,7 +186,7 @@
 
             <!-- Column Totals Footer -->
             <tr class="bg-surface-container-low/20 font-extrabold text-xs">
-              <td class="px-3 py-3 text-on-surface-variant border-r border-[#464554]/30 min-w-[240px]">Total</td>
+              <td class="px-3 py-3 text-on-surface-variant border-r border-[#464554]/30 min-w-[320px]">Total</td>
               <td
                 v-for="m in months"
                 :key="m"
@@ -178,7 +216,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useBudgetStore } from '~/stores/budget'
 import { useSettingsStore } from '~/stores/settings'
-import { ChevronDown, ChevronRight, Edit2, Trash2, Plus } from '@lucide/vue'
+import { ChevronDown, ChevronRight, Edit2, Trash2, Plus, Check, X } from '@lucide/vue'
 
 const store = useBudgetStore()
 const settingsStore = useSettingsStore()
@@ -195,8 +233,23 @@ const groups = ref([
 
 const editingCatId = ref(null)
 const editingCatName = ref('')
+const editingCatGlobal = ref('')
 const addingGroupId = ref(null)
 const newCatName = ref('')
+const newCatGlobal = ref('')
+
+const getGlobalCategories = (groupId) => {
+  if (groupId === 'expenses') {
+    return ['Housing', 'Food', 'Utilities', 'Entertainment', 'Other Expenses']
+  }
+  if (groupId === 'savings') {
+    return ['Emergency Fund', 'Retirement', 'Vacation', 'New Car', 'Other Savings']
+  }
+  if (groupId === 'debt') {
+    return ['Credit Card', 'Loans & Installments', 'Other Debts']
+  }
+  return []
+}
 
 const toggleExpand = (group) => {
   group.expanded = !group.expanded
@@ -265,17 +318,35 @@ const getGroupAnnualTotal = (groupId) => {
     .reduce((sum, b) => sum + b.planned, 0)
 }
 
-const startEditCategory = (id, name) => {
+const startEditCategory = (id, name, globalCategory) => {
   editingCatId.value = id
   editingCatName.value = name
+  editingCatGlobal.value = globalCategory || ''
 }
 
-const saveCategoryName = async (id) => {
+const saveCategoryChanges = async (id, event) => {
   if (!editingCatName.value.trim()) {
     editingCatId.value = null
     return
   }
-  await store.updateCategory(id, editingCatName.value.trim())
+
+  if (event && event.type === 'blur') {
+    const related = event.relatedTarget
+    if (related && (
+      related.tagName === 'SELECT' || 
+      related.tagName === 'BUTTON' || 
+      related.classList.contains('cursor-pointer') ||
+      related.closest('.flex')
+    )) {
+      return
+    }
+  }
+
+  if (editingCatGlobal.value) {
+    await store.updateCategory(id, editingCatName.value.trim(), editingCatGlobal.value)
+  } else {
+    await store.updateCategory(id, editingCatName.value.trim())
+  }
   editingCatId.value = null
 }
 
@@ -287,9 +358,14 @@ const deleteCategory = (id) => {
 
 const saveNewCategory = (groupId) => {
   if (!newCatName.value.trim()) return
-  store.addCategory(newCatName.value.trim(), groupId)
+  if (newCatGlobal.value) {
+    store.addCategory(newCatName.value.trim(), groupId, newCatGlobal.value)
+  } else {
+    store.addCategory(newCatName.value.trim(), groupId)
+  }
   addingGroupId.value = null
   newCatName.value = ''
+  newCatGlobal.value = ''
 }
 
 const vFocus = {

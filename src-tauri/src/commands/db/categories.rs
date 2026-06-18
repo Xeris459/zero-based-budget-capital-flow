@@ -16,8 +16,8 @@ pub fn db_add_category_inner(state: &DbState, category: Category) -> Result<(), 
     let enc_name = encrypt_data(&category.name, &key)?;
 
     conn.execute(
-        "INSERT INTO categories (id, name, parent_id) VALUES (?1, ?2, ?3)",
-        (&category.id, &enc_name, &category.parent_id),
+        "INSERT INTO categories (id, name, parent_id, global_category) VALUES (?1, ?2, ?3, ?4)",
+        (&category.id, &enc_name, &category.parent_id, &category.global_category),
     )?;
     Ok(())
 }
@@ -46,8 +46,8 @@ pub fn db_update_category_inner(state: &DbState, category: Category) -> Result<(
     let enc_name = encrypt_data(&category.name, &key)?;
 
     conn.execute(
-        "UPDATE categories SET name = ?1, parent_id = ?2 WHERE id = ?3",
-        (&enc_name, &category.parent_id, &category.id),
+        "UPDATE categories SET name = ?1, parent_id = ?2, global_category = ?3 WHERE id = ?4",
+        (&enc_name, &category.parent_id, &category.global_category, &category.id),
     )?;
     Ok(())
 }
