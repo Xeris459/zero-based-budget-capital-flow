@@ -15,7 +15,7 @@
     <div class="relative w-44 h-44 flex items-center justify-center mb-6">
       <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
         <!-- Background Circle -->
-        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#1f1f27" stroke-width="12" />
+        <circle cx="50" cy="50" r="40" fill="none" stroke="#1f1f27" stroke-width="12" />
 
         <!-- Slices -->
         <circle
@@ -24,7 +24,7 @@
           cx="50"
           cy="50"
           r="40"
-          fill="transparent"
+          fill="none"
           :stroke="slice.color"
           stroke-width="12"
           :stroke-dasharray="`${slice.dash} 251.2`"
